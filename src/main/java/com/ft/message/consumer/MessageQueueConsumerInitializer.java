@@ -15,16 +15,18 @@ public class MessageQueueConsumerInitializer implements Managed {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageQueueConsumerInitializer.class);
 
-    private final Client queueProxyClient;
     private final MessageQueueConsumer messageQueueConsumer;
+    private final Client queueProxyClient;
 
     public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
-                                           MessageListener listener) {
-        queueProxyClient = Client.create();
+                                           MessageListener listener,
+                                           Client queueProxyClient) {
+        this.queueProxyClient = queueProxyClient;
         MessageQueueProxyService messageQueueProxyService = new MessageQueueProxyServiceImpl(consumerConfiguration, queueProxyClient);
         messageQueueConsumer = new MessageQueueConsumer(
                 messageQueueProxyService,
-                listener);
+                listener,
+                consumerConfiguration.getBackoffPeriod());
     }
 
     @Override

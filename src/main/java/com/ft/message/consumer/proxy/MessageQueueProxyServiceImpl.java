@@ -46,10 +46,10 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     }
 
     @Override
-    public void destroyConsumerInstance(URI consumerInstace) {
+    public void destroyConsumerInstance(URI consumerInstance) {
         ClientResponse clientResponse = null;
         try {
-            URI uri = UriBuilder.fromUri(consumerInstace)
+            URI uri = UriBuilder.fromUri(consumerInstance)
                     .build();
             clientResponse = proxyClient.resource(uri)
                     .header("Host", configuration.getQueue())

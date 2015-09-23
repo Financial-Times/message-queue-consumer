@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.net.URI;
-import java.util.Base64;
+import java.util.List;
 
 public class MessageQueueConsumer implements Runnable {
 
@@ -18,18 +18,22 @@ public class MessageQueueConsumer implements Runnable {
 
     private final MessageListener listener;
     private MessageQueueProxyService messageQueueProxyService;
+    private int backoffPeriod;
 
-    public MessageQueueConsumer(MessageQueueProxyService messageQueueProxyService, MessageListener listener) {
+    public MessageQueueConsumer(MessageQueueProxyService messageQueueProxyService, MessageListener listener, int backoffPeriod) {
         this.listener = listener;
         this.messageQueueProxyService = messageQueueProxyService;
+        this.backoffPeriod = backoffPeriod;
     }
 
     private void consume() {
         while (true) {
             URI consumerInstance = null;
+            List<MessageRecord> messageRecords = null;
             try {
                 consumerInstance = messageQueueProxyService.createConsumerInstance();
-                for (MessageRecord messageRecord : messageQueueProxyService.consumeMessages(consumerInstance)) {
+                messageRecords = messageQueueProxyService.consumeMessages(consumerInstance);
+                for (MessageRecord messageRecord : messageRecords) {
                     Message message = null;
                     try {
                         message = Message.parse(messageRecord.getValue());
@@ -48,6 +52,13 @@ public class MessageQueueConsumer implements Runnable {
             finally {
                 if (consumerInstance != null) {
                     messageQueueProxyService.destroyConsumerInstance(consumerInstance);
+                }
+                if (messageRecords != null && messageRecords.isEmpty()) {
+                    try {
+                        Thread.sleep(backoffPeriod);
+                    } catch (InterruptedException e) {
+                        LOGGER.warn("Interrupted while sleeping", e);
+                    }
                 }
             }
         }

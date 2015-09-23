@@ -8,18 +8,18 @@ public class MessageQueueConsumerConfiguration {
     private final String groupName;
     private final String queueProxyHost;
     private final String queue;
-    private final int queueProxyConnectionTimeout;
+    private int backoffPeriod;
 
     public MessageQueueConsumerConfiguration(@JsonProperty("topicName") String topicName,
                                              @JsonProperty("groupName") String groupName,
                                              @JsonProperty("queueProxyHost") String queueProxyHost,
                                              @JsonProperty("queue") String queue,
-                                             @JsonProperty("queueProxyConnectionTimeout") int queueProxyConnectionTimeout) {
+                                             @JsonProperty("backoffPeriod") int backoffPeriod) {
         this.topicName = topicName;
         this.groupName = groupName;
         this.queueProxyHost = queueProxyHost;
         this.queue = queue;
-        this.queueProxyConnectionTimeout = queueProxyConnectionTimeout;
+        this.backoffPeriod = backoffPeriod;
     }
 
     public String getTopicName() {
@@ -30,15 +30,15 @@ public class MessageQueueConsumerConfiguration {
         return queueProxyHost;
     }
 
-    public int getQueueProxyConnectionTimeout() {
-        return queueProxyConnectionTimeout;
-    }
-
     public String getGroupName() {
         return groupName;
     }
 
     public String getQueue() {
         return queue;
+    }
+
+    public int getBackoffPeriod() {
+        return backoffPeriod;
     }
 }
