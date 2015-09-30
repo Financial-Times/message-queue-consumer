@@ -33,7 +33,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             clientResponse = proxyClient.resource(uri)
                     .header("Content-Type", "application/json")
                     .header("Host", configuration.getQueue())
-                    .post(ClientResponse.class);
+                    .post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\"}");
             if (clientResponse.getStatus() != 200) {
                 throw new QueueProxyServiceException(String.format("Unable to create consumer instance. Proxy returned %d", clientResponse.getStatus()));
             }
