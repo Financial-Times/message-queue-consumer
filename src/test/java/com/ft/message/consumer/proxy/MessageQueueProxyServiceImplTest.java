@@ -62,14 +62,14 @@ public class MessageQueueProxyServiceImplTest {
         final WebResource.Builder anotherMockedBuilder = mock(WebResource.Builder.class);
         when(mockedBuilder.header(eq("Host"), eq("kafka"))).thenReturn(anotherMockedBuilder);
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(anotherMockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\"}")).thenReturn(mockedResponse);
+        when(anotherMockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(200);
         when(mockedResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(new CreateConsumerInstanceResponse(expectedUri));
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
 
         assertThat(actualConsumerInstanceUri, is(equalTo(expectedUri)));
-        verify(anotherMockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\"}");
+        verify(anotherMockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}");
         verify(mockedResponse, times(1)).close();
     }
 
@@ -86,7 +86,7 @@ public class MessageQueueProxyServiceImplTest {
         final WebResource.Builder anotherMockedBuilder = mock(WebResource.Builder.class);
         when(mockedBuilder.header(eq("Host"), eq("kafka"))).thenReturn(anotherMockedBuilder);
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(anotherMockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\"}")).thenReturn(mockedResponse);
+        when(anotherMockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
