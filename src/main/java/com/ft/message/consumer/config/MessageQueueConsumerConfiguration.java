@@ -8,7 +8,7 @@ public class MessageQueueConsumerConfiguration {
     private final String groupName;
     private final String queueProxyHost;
     private final String queue;
-    private int backoffPeriod;
+    private final int backoffPeriod;
 
     public MessageQueueConsumerConfiguration(@JsonProperty("topicName") String topicName,
                                              @JsonProperty("groupName") String groupName,
@@ -19,7 +19,7 @@ public class MessageQueueConsumerConfiguration {
         this.groupName = groupName;
         this.queueProxyHost = queueProxyHost;
         this.queue = queue;
-        this.backoffPeriod = backoffPeriod;
+        this.backoffPeriod = backoffPeriod == 0? 8000 : backoffPeriod;
     }
 
     public String getTopicName() {
