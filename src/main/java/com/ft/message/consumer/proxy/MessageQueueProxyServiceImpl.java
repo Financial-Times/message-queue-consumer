@@ -55,7 +55,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                     .header("Host", configuration.getQueue())
                     .delete(ClientResponse.class);
             if (clientResponse.getStatus() != 204) {
-                throw new QueueProxyServiceException(String.format("Unable to create consumer instance. Proxy returned %d", clientResponse.getStatus()));
+                throw new QueueProxyServiceException(String.format("Unable to destroy consumer instance. Proxy returned %d", clientResponse.getStatus()));
             }
         } finally {
             if (clientResponse != null) {
@@ -77,7 +77,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                     .header("Accept", "application/json")
                     .get(ClientResponse.class);
             if (clientResponse.getStatus() != 200) {
-                throw new QueueProxyServiceException(String.format("Unable to create consumer instance. Proxy returned %d", clientResponse.getStatus()));
+                throw new QueueProxyServiceException(String.format("Unable to consume messages. Proxy returned %d", clientResponse.getStatus()));
             }
 
             return clientResponse.getEntity(new GenericType<List<MessageRecord>>(){});

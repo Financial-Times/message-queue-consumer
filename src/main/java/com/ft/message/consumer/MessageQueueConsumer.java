@@ -47,7 +47,7 @@ public class MessageQueueConsumer implements Runnable {
                     }
                 }
             } catch (Throwable t) {
-                LOGGER.error("outcome=Exception message=\"Error while communicating with queue proxy.\"");
+                LOGGER.error("outcome=Exception message=\"Error while communicating with queue proxy.\"", t);
             }
             finally {
                 if (consumerInstance != null) {
