@@ -53,7 +53,7 @@ public class MessageQueueConsumer implements Runnable {
                 if (consumerInstance != null) {
                     messageQueueProxyService.destroyConsumerInstance(consumerInstance);
                 }
-                if (messageRecords != null && messageRecords.isEmpty()) {
+                if (messageRecords == null || messageRecords.isEmpty()) {
                     try {
                         Thread.sleep(backoffPeriod);
                     } catch (InterruptedException e) {
