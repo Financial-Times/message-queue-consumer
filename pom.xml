@@ -6,7 +6,7 @@
 
     <groupId>com.ft</groupId>
     <artifactId>message-queue-consumer</artifactId>
-    <version>1.1.1</version>
+    <version>1.2.1</version>
 
     <packaging>jar</packaging>
     <name>Message queue consumer</name>
@@ -103,6 +103,11 @@
    		 	<artifactId>api-hamcrest-matchers</artifactId>
     		<version>0.7.0</version>
     		 <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.ft</groupId>
+            <artifactId>advanced-dropwizard-healthcheck</artifactId>
+            <version>3.2.0</version>
         </dependency>
     </dependencies>
 
