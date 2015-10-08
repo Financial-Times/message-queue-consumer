@@ -68,11 +68,11 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     }
 
     @Override
-    public List<MessageRecord> consumeMessages(URI consumerInstace) {
+    public List<MessageRecord> consumeMessages(URI consumerInstance) {
         ClientResponse clientResponse = null;
         try {
             URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
-            URI uri = UriBuilder.fromUri(consumerInstace)
+            URI uri = UriBuilder.fromUri(consumerInstance)
                     .host(proxyUri.getHost())
                     .port(proxyUri.getPort())
                     .path("topics")

@@ -9,7 +9,7 @@ public interface MessageQueueProxyService {
 
     URI createConsumerInstance();
 
-    void destroyConsumerInstance(URI consumerInstace);
+    void destroyConsumerInstance(URI consumerInstance);
 
-    List<MessageRecord> consumeMessages(URI consumerInstace);
+    List<MessageRecord> consumeMessages(URI consumerInstance);
 }
