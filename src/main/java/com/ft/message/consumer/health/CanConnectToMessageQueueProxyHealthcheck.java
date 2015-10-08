@@ -1,6 +1,6 @@
 package com.ft.message.consumer.health;
 
-import com.ft.message.consumer.config.HealtcheckParameters;
+import com.ft.message.consumer.config.HealtcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
 import com.ft.platform.dropwizard.AdvancedHealthCheck;
@@ -17,16 +17,19 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     private static final Logger logger = LoggerFactory.getLogger(CanConnectToMessageQueueProxyHealthcheck.class);
     private static final String groupName = "healthcheck";
+    private static final int HTTP_RESPONSE_OK = 200;
+    private static final int HTTP_RESPONSE_NO_CONTENT = 204;
+
     private MessageQueueConsumerConfiguration configuration;
-    private HealtcheckParameters healtcheckParameters;
+    private HealtcheckConfiguration healtcheckConfiguration;
     private Client proxyClient;
 
     public CanConnectToMessageQueueProxyHealthcheck(final Client proxyClient, final MessageQueueConsumerConfiguration configuration,
-                                                    final HealtcheckParameters healtcheckParameters) {
-        super(healtcheckParameters.getName());
+                                                    final HealtcheckConfiguration healtcheckConfiguration) {
+        super(healtcheckConfiguration.getName());
         this.proxyClient = proxyClient;
         this.configuration = configuration;
-        this.healtcheckParameters = healtcheckParameters;
+        this.healtcheckConfiguration = healtcheckConfiguration;
     }
 
     @Override
@@ -35,23 +38,23 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
         try {
             URI uri = buildConsumerUri();
             clientResponse = getClientResponseForProxyConnection(uri);
-            if (clientResponse.getStatus() != 200) {
+            if (clientResponse.getStatus() != HTTP_RESPONSE_OK) {
                 return reportUnhealthy(String.format("Unable to connect to queue proxy. %d", clientResponse.getStatus()));
             }
 
             URI consumerInstance = clientResponse.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
             URI messageReaderUri = buildMessageReaderUri(consumerInstance);
             clientResponse = getClientResponseForMessageConsumer(messageReaderUri);
-            if (clientResponse.getStatus() != 200) {
+            if (clientResponse.getStatus() != HTTP_RESPONSE_OK) {
                 return reportUnhealthy(String.format("Unable to consume messages. Proxy returned %d", clientResponse.getStatus()));
             }
 
             clientResponse = deleteConsumerInstance(consumerInstance);
-            if (clientResponse.getStatus() != 204) {
+            if (clientResponse.getStatus() != HTTP_RESPONSE_NO_CONTENT) {
                 return reportUnhealthy(String.format("Unable to destroy consumer instance. Proxy returned %d", clientResponse.getStatus()));
             }
         } catch (Throwable ex) {
-            String message = getName() + ": " + "Exception during connecting to kafka proxy: " + ex.getLocalizedMessage();
+            String message = getName() + ": " + "Exception during connecting to message queue proxy: " + ex.getLocalizedMessage();
             return reportUnhealthy(message);
         } finally {
             closeClientResponse(clientResponse);
@@ -65,7 +68,12 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
         }
     }
 
-    protected ClientResponse deleteConsumerInstance(URI uri) {
+    protected ClientResponse deleteConsumerInstance(URI consumerInstance) {
+        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
+        URI uri = UriBuilder.fromUri(consumerInstance)
+                .host(proxyUri.getHost())
+                .port(proxyUri.getPort())
+                .build();
         return proxyClient.resource(uri)
                 .header("Host", configuration.getQueue())
                 .delete(ClientResponse.class);
@@ -86,7 +94,10 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     }
 
     private URI buildMessageReaderUri(URI consumerUri) {
+        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
         return UriBuilder.fromUri(consumerUri)
+                .host(proxyUri.getHost())
+                .port(proxyUri.getPort())
                 .path("topics")
                 .path(configuration.getTopicName())
                 .build();
@@ -106,26 +117,26 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     @Override
     protected int severity() {
-        return healtcheckParameters.getSeverity();
+        return healtcheckConfiguration.getSeverity();
     }
 
     @Override
     protected String businessImpact() {
-        return healtcheckParameters.getBusinessImpact();
+        return healtcheckConfiguration.getBusinessImpact();
     }
 
     @Override
     protected String technicalSummary() {
-        return healtcheckParameters.getTechnicalSummary();
+        return healtcheckConfiguration.getTechnicalSummary();
     }
 
     @Override
     protected String panicGuideUrl() {
-        return healtcheckParameters.getPanicGuideUrl();
+        return healtcheckConfiguration.getPanicGuideUrl();
     }
 
     @Override
     public String getName() {
-        return healtcheckParameters.getName();
+        return healtcheckConfiguration.getName();
     }
 }

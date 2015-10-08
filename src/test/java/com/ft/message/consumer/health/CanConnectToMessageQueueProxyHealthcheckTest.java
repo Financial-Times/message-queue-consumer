@@ -1,6 +1,6 @@
 package com.ft.message.consumer.health;
 
-import com.ft.message.consumer.config.HealtcheckParameters;
+import com.ft.message.consumer.config.HealtcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
 import com.ft.platform.dropwizard.AdvancedResult;
@@ -34,8 +34,11 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
     private static final String groupName = "groupName";
     private static final String proxyHost = "http://localhost:8082";
 
-    private HealtcheckParameters healthcheckParameters;
-    private MessageQueueConsumerConfiguration consumerConfiguration;
+    private static final int HTTP_RESPONSE_OK = 200;
+    private static final int HTTP_RESPONSE_NO_CONTENT = 204;
+    private static final int HTTP_RESPONSE_INTERNAL_SERVER_ERROR = 500;
+
+    private HealtcheckConfiguration healtcheckConfiguration;
     private CanConnectToMessageQueueProxyHealthcheck healthcheck;
 
     @Mock
@@ -43,9 +46,9 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
 
     @Before
     public void setUp() {
-        healthcheckParameters = new HealtcheckParameters("kafka-proxy", 2, "business impact text", "tech summary", "panic guide url");
-        consumerConfiguration = new MessageQueueConsumerConfiguration(topicName, groupName, proxyHost, "kafka", 8000);
-        healthcheck = new CanConnectToMessageQueueProxyHealthcheck(mockClient, consumerConfiguration, healthcheckParameters);
+        healtcheckConfiguration = new HealtcheckConfiguration("kafka-proxy", 2, "business impact text", "tech summary", "panic guide url");
+        MessageQueueConsumerConfiguration consumerConfiguration = new MessageQueueConsumerConfiguration(topicName, groupName, proxyHost, "kafka", 8000);
+        healthcheck = new CanConnectToMessageQueueProxyHealthcheck(mockClient, consumerConfiguration, healtcheckConfiguration);
     }
 
     @Test
@@ -54,13 +57,13 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
         ClientResponse clientResponse = null;
         doReturn(clientResponse).when(healthCheck).getClientResponseForProxyConnection((URI) any());
 
-        assertThat(healthcheck.checkAdvanced(), is(unhealthy(healthcheckParameters.getName() + ": " + "Exception during connecting to kafka proxy: ")));
+        assertThat(healthCheck.checkAdvanced(), is(unhealthy(healtcheckConfiguration.getName() + ": " + "Exception during connecting to message queue proxy: ")));
     }
 
     @Test
     public void shouldReturnErrorWhenHostIsNotReachable() throws Exception {
         CanConnectToMessageQueueProxyHealthcheck healthCheck = spy(healthcheck);
-        ClientResponse mockClientResponse = mockClientResponseForProxyConnection(healthCheck, 500);
+        ClientResponse mockClientResponse = mockClientResponseForProxyConnection(healthCheck, HTTP_RESPONSE_INTERNAL_SERVER_ERROR);
 
         AdvancedResult expectedHealthCheckResult = AdvancedResult.error(healthCheck, String.format("Unable to connect to queue proxy. %d", mockClientResponse.getStatus()));
         AdvancedResult actualHealthCheckResult = healthCheck.checkAdvanced();
@@ -74,7 +77,7 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
     public void shouldReturnErrorWhenTopicIsNotFound() throws Exception {
         CanConnectToMessageQueueProxyHealthcheck healthCheck = spy(healthcheck);
 
-        mockClientResponseForProxyConnection(healthCheck, 200);
+        mockClientResponseForProxyConnection(healthCheck, HTTP_RESPONSE_OK);
         ClientResponse mockClientResponseForMessageConsuming = mockClientResponseForMessageConsuming(healthCheck, 500);
 
         AdvancedResult expectedHealthCheckResult = AdvancedResult.error(healthCheck, String.format("Unable to consume messages. Proxy returned %d",
@@ -89,9 +92,9 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
     public void shouldReturnHealthyWhenConnectionEstablishedAndMessagesCanBeConsumed() throws Exception {
         CanConnectToMessageQueueProxyHealthcheck healthCheck = spy(healthcheck);
 
-        mockClientResponseForProxyConnection(healthCheck, 200);
-        mockClientResponseForMessageConsuming(healthCheck, 200);
-        mockClientResponseAtConsumerDestroy(healthCheck, 204);
+        mockClientResponseForProxyConnection(healthCheck, HTTP_RESPONSE_OK);
+        mockClientResponseForMessageConsuming(healthCheck, HTTP_RESPONSE_OK);
+        mockClientResponseAtConsumerDestroy(healthCheck, HTTP_RESPONSE_NO_CONTENT);
 
         AdvancedResult expectedHealthCheckResult = AdvancedResult.healthy("OK");
         AdvancedResult actualHealthCheckResult = healthCheck.checkAdvanced();
@@ -121,7 +124,7 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
         doReturn(mockClientResponse).when(healthCheck).getClientResponseForProxyConnection((URI) any());
         doNothing().when(mockClientResponse).close();
 
-        if (statusCode == 200) {
+        if (statusCode == HTTP_RESPONSE_OK) {
             CreateConsumerInstanceResponse response = mock(CreateConsumerInstanceResponse.class);
             when(mockClientResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(response);
             doReturn(new URI("uri")).when(response).getBaseUri();

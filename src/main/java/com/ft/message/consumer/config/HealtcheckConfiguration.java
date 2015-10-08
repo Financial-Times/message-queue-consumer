@@ -3,7 +3,7 @@ package com.ft.message.consumer.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.constraints.NotNull;
 
-public class HealtcheckParameters {
+public class HealtcheckConfiguration {
 
     @NotNull
     @JsonProperty
@@ -25,10 +25,10 @@ public class HealtcheckParameters {
     @JsonProperty
     private String panicGuideUrl;
 
-    public HealtcheckParameters() {
+    public HealtcheckConfiguration() {
     }
 
-    public HealtcheckParameters(String name, int severity,
+    public HealtcheckConfiguration(String name, int severity,
                                 String businessImpact, String technicalSummary, String panicGuideUrl) {
         this.name = name;
         this.severity = severity;
