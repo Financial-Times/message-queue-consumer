@@ -49,7 +49,10 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     public void destroyConsumerInstance(URI consumerInstance) {
         ClientResponse clientResponse = null;
         try {
+            URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
             URI uri = UriBuilder.fromUri(consumerInstance)
+                    .host(proxyUri.getHost())
+                    .port(proxyUri.getPort())
                     .build();
             clientResponse = proxyClient.resource(uri)
                     .header("Host", configuration.getQueue())
@@ -68,7 +71,10 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     public List<MessageRecord> consumeMessages(URI consumerInstace) {
         ClientResponse clientResponse = null;
         try {
+            URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
             URI uri = UriBuilder.fromUri(consumerInstace)
+                    .host(proxyUri.getHost())
+                    .port(proxyUri.getPort())
                     .path("topics")
                     .path(configuration.getTopicName())
                     .build();
