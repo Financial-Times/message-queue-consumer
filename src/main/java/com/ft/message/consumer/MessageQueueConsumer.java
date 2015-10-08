@@ -10,6 +10,7 @@ import org.slf4j.MDC;
 
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class MessageQueueConsumer implements Runnable {
 
@@ -55,7 +56,7 @@ public class MessageQueueConsumer implements Runnable {
                 }
                 if (messageRecords == null || messageRecords.isEmpty()) {
                     try {
-                        Thread.sleep(backoffPeriod);
+                        TimeUnit.MILLISECONDS.sleep(backoffPeriod);
                     } catch (InterruptedException e) {
                         LOGGER.warn("Interrupted while sleeping", e);
                     }
