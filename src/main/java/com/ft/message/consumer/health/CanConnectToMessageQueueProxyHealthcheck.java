@@ -21,15 +21,15 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     private static final int HTTP_RESPONSE_NO_CONTENT = 204;
 
     private MessageQueueConsumerConfiguration configuration;
-    private HealtcheckConfiguration healtcheckConfiguration;
+    private HealtcheckConfiguration healthcheckConfiguration;
     private Client proxyClient;
 
     public CanConnectToMessageQueueProxyHealthcheck(final Client proxyClient, final MessageQueueConsumerConfiguration configuration,
-                                                    final HealtcheckConfiguration healtcheckConfiguration) {
-        super(healtcheckConfiguration.getName());
+                                                    final HealtcheckConfiguration healthcheckConfiguration) {
+        super(healthcheckConfiguration.getName());
         this.proxyClient = proxyClient;
         this.configuration = configuration;
-        this.healtcheckConfiguration = healtcheckConfiguration;
+        this.healthcheckConfiguration = healthcheckConfiguration;
     }
 
     @Override
@@ -117,26 +117,26 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     @Override
     protected int severity() {
-        return healtcheckConfiguration.getSeverity();
+        return healthcheckConfiguration.getSeverity();
     }
 
     @Override
     protected String businessImpact() {
-        return healtcheckConfiguration.getBusinessImpact();
+        return healthcheckConfiguration.getBusinessImpact();
     }
 
     @Override
     protected String technicalSummary() {
-        return healtcheckConfiguration.getTechnicalSummary();
+        return healthcheckConfiguration.getTechnicalSummary();
     }
 
     @Override
     protected String panicGuideUrl() {
-        return healtcheckConfiguration.getPanicGuideUrl();
+        return healthcheckConfiguration.getPanicGuideUrl();
     }
 
     @Override
     public String getName() {
-        return healtcheckConfiguration.getName();
+        return healthcheckConfiguration.getName();
     }
 }
