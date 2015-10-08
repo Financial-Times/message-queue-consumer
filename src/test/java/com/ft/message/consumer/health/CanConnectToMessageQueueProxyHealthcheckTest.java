@@ -1,6 +1,6 @@
 package com.ft.message.consumer.health;
 
-import com.ft.message.consumer.config.HealtcheckConfiguration;
+import com.ft.message.consumer.config.HealthcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
 import com.ft.platform.dropwizard.AdvancedResult;
@@ -38,7 +38,7 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
     private static final int HTTP_RESPONSE_NO_CONTENT = 204;
     private static final int HTTP_RESPONSE_INTERNAL_SERVER_ERROR = 500;
 
-    private HealtcheckConfiguration healtcheckConfiguration;
+    private HealthcheckConfiguration healtcheckConfiguration;
     private CanConnectToMessageQueueProxyHealthcheck healthcheck;
 
     @Mock
@@ -46,7 +46,7 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
 
     @Before
     public void setUp() {
-        healtcheckConfiguration = new HealtcheckConfiguration("kafka-proxy", 2, "business impact text", "tech summary", "panic guide url");
+        healtcheckConfiguration = new HealthcheckConfiguration("kafka-proxy", 2, "business impact text", "tech summary", "panic guide url");
         MessageQueueConsumerConfiguration consumerConfiguration = new MessageQueueConsumerConfiguration(topicName, groupName, proxyHost, "kafka", 8000);
         healthcheck = new CanConnectToMessageQueueProxyHealthcheck(mockClient, consumerConfiguration, healtcheckConfiguration);
     }

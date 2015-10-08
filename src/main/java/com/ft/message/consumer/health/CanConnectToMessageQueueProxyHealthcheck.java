@@ -1,6 +1,6 @@
 package com.ft.message.consumer.health;
 
-import com.ft.message.consumer.config.HealtcheckConfiguration;
+import com.ft.message.consumer.config.HealthcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
 import com.ft.platform.dropwizard.AdvancedHealthCheck;
@@ -21,11 +21,11 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     private static final int HTTP_RESPONSE_NO_CONTENT = 204;
 
     private MessageQueueConsumerConfiguration configuration;
-    private HealtcheckConfiguration healthcheckConfiguration;
+    private HealthcheckConfiguration healthcheckConfiguration;
     private Client proxyClient;
 
     public CanConnectToMessageQueueProxyHealthcheck(final Client proxyClient, final MessageQueueConsumerConfiguration configuration,
-                                                    final HealtcheckConfiguration healthcheckConfiguration) {
+                                                    final HealthcheckConfiguration healthcheckConfiguration) {
         super(healthcheckConfiguration.getName());
         this.proxyClient = proxyClient;
         this.configuration = configuration;
