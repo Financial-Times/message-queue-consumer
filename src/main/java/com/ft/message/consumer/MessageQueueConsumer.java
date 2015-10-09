@@ -49,17 +49,18 @@ public class MessageQueueConsumer implements Runnable {
                 }
             } catch (Throwable t) {
                 LOGGER.error("outcome=Exception message=\"Error while communicating with queue proxy.\"", t);
-            }
-            finally {
-                if (consumerInstance != null) {
-                    messageQueueProxyService.destroyConsumerInstance(consumerInstance);
-                }
-                if (messageRecords == null || messageRecords.isEmpty()) {
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(backoffPeriod);
-                    } catch (InterruptedException e) {
-                        LOGGER.warn("Interrupted while sleeping", e);
+            } finally {
+                try {
+                    if (consumerInstance != null) {
+                        messageQueueProxyService.destroyConsumerInstance(consumerInstance);
                     }
+                    if (messageRecords == null || messageRecords.isEmpty()) {
+                        TimeUnit.MILLISECONDS.sleep(backoffPeriod);
+                    }
+                } catch (InterruptedException e) {
+                    LOGGER.warn("Interrupted while sleeping", e);
+                } catch (Throwable t) {
+                    LOGGER.warn("outcome=Exception message=\"Error while destroying consumer instance.\"", t);
                 }
             }
         }
