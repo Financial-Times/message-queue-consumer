@@ -59,6 +59,7 @@ public class MessageQueueConsumer implements Runnable {
                     }
                 } catch (InterruptedException e) {
                     LOGGER.warn("Interrupted while sleeping", e);
+                    Thread.currentThread().interrupt();
                 } catch (Throwable t) {
                     LOGGER.warn("outcome=Exception message=\"Error while destroying consumer instance.\"", t);
                 }
