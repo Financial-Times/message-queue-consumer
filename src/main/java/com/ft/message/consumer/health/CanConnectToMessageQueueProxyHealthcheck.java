@@ -34,30 +34,34 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     @Override
     protected AdvancedResult checkAdvanced() throws Exception {
-        ClientResponse clientResponse = null;
+        ClientResponse clientResponseToCreateConsumer = null;
+        ClientResponse clientResponseToCheckTopic = null;
+        ClientResponse clientResponseToCloseConsumer = null;
         try {
             URI uri = buildConsumerUri();
-            clientResponse = getClientResponseForProxyConnection(uri);
-            if (clientResponse.getStatus() != HTTP_RESPONSE_OK) {
-                return reportUnhealthy(String.format("Unable to connect to queue proxy. %d", clientResponse.getStatus()));
+            clientResponseToCreateConsumer = getClientResponseForProxyConnection(uri);
+            if (clientResponseToCreateConsumer.getStatus() != HTTP_RESPONSE_OK) {
+                return reportUnhealthy(String.format("Unable to connect to queue proxy. %d", clientResponseToCreateConsumer.getStatus()));
             }
 
-            URI consumerInstance = clientResponse.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
+            URI consumerInstance = clientResponseToCreateConsumer.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
             URI messageReaderUri = buildMessageReaderUri(consumerInstance);
-            clientResponse = getClientResponseForMessageConsumer(messageReaderUri);
-            if (clientResponse.getStatus() != HTTP_RESPONSE_OK) {
-                return reportUnhealthy(String.format("Unable to consume messages. Proxy returned %d", clientResponse.getStatus()));
+            clientResponseToCheckTopic = getClientResponseForMessageConsumer(messageReaderUri);
+            if (clientResponseToCheckTopic.getStatus() != HTTP_RESPONSE_OK) {
+                return reportUnhealthy(String.format("Unable to consume messages. Proxy returned %d", clientResponseToCheckTopic.getStatus()));
             }
 
-            clientResponse = deleteConsumerInstance(consumerInstance);
-            if (clientResponse.getStatus() != HTTP_RESPONSE_NO_CONTENT) {
-                return reportUnhealthy(String.format("Unable to destroy consumer instance. Proxy returned %d", clientResponse.getStatus()));
+            clientResponseToCloseConsumer = deleteConsumerInstance(consumerInstance);
+            if (clientResponseToCloseConsumer.getStatus() != HTTP_RESPONSE_NO_CONTENT) {
+                return reportUnhealthy(String.format("Unable to destroy consumer instance. Proxy returned %d", clientResponseToCloseConsumer.getStatus()));
             }
         } catch (Throwable ex) {
             String message = getName() + ": " + "Exception during connecting to message queue proxy: " + ex.getLocalizedMessage();
             return reportUnhealthy(message);
         } finally {
-            closeClientResponse(clientResponse);
+            closeClientResponse(clientResponseToCreateConsumer);
+            closeClientResponse(clientResponseToCheckTopic);
+            closeClientResponse(clientResponseToCloseConsumer);
         }
         return AdvancedResult.healthy("OK");
     }
