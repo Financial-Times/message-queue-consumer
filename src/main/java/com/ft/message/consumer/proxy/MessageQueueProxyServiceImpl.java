@@ -54,16 +54,18 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     public void destroyConsumerInstance(URI consumerInstance) {
         ClientResponse clientResponse = null;
         try {
-            URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
-            URI uri = UriBuilder.fromUri(consumerInstance)
-                    .host(proxyUri.getHost())
-                    .port(proxyUri.getPort())
-                    .build();
+
+            UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance);
+            if (queueIsNotEmpty()) {
+                addProxyPortAndHostInUri(uriBuilder);
+            }
+            URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
+
             clientResponse = builder.delete(ClientResponse.class);
 
             if (clientResponse.getStatus() != 204) {
@@ -80,14 +82,14 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     public List<MessageRecord> consumeMessages(URI consumerInstance) {
         ClientResponse clientResponse = null;
         try {
-            URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
-            URI uri = UriBuilder.fromUri(consumerInstance)
-                    .host(proxyUri.getHost())
-                    .port(proxyUri.getPort())
-                    .path("topics")
-                    .path(configuration.getTopicName())
-                    .build();
+            UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance).path("topics")
+                    .path(configuration.getTopicName());
 
+            if (queueIsNotEmpty()) {
+                addProxyPortAndHostInUri(uriBuilder);
+            }
+
+            URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             builder.header("Accept", "application/json");
@@ -100,12 +102,18 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                 throw new QueueProxyServiceException(String.format("Unable to consume messages. Proxy returned %d", clientResponse.getStatus()));
             }
 
-            return clientResponse.getEntity(new GenericType<List<MessageRecord>>(){});
+            return clientResponse.getEntity(new GenericType<List<MessageRecord>>() {
+            });
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
             }
         }
+    }
+
+    private void addProxyPortAndHostInUri(UriBuilder uriBuilder) {
+        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
+        uriBuilder.host(proxyUri.getHost()).port(proxyUri.getPort());
     }
 
     private boolean queueIsNotEmpty() {

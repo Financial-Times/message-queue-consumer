@@ -74,11 +74,11 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     }
 
     protected ClientResponse deleteConsumerInstance(URI consumerInstance) {
-        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
-        URI uri = UriBuilder.fromUri(consumerInstance)
-                .host(proxyUri.getHost())
-                .port(proxyUri.getPort())
-                .build();
+        UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance);
+        if (queueIsNotEmpty()) {
+            addProxyPortAndHostInUri(uriBuilder);
+        }
+        URI uri = uriBuilder.build();
 
         WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
         if (queueIsNotEmpty()) {
@@ -106,13 +106,11 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     }
 
     private URI buildMessageReaderUri(URI consumerUri) {
-        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
-        return UriBuilder.fromUri(consumerUri)
-                .host(proxyUri.getHost())
-                .port(proxyUri.getPort())
-                .path("topics")
-                .path(configuration.getTopicName())
-                .build();
+        UriBuilder uriBuilder = UriBuilder.fromUri(consumerUri).path("topics").path(configuration.getTopicName());
+        if (queueIsNotEmpty()) {
+            addProxyPortAndHostInUri(uriBuilder);
+        }
+        return uriBuilder.build();
     }
 
     private URI buildConsumerUri() {
@@ -120,6 +118,12 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
                 .path("consumers")
                 .path(groupName)
                 .build();
+    }
+
+
+    private void addProxyPortAndHostInUri(UriBuilder uriBuilder) {
+        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
+        uriBuilder.host(proxyUri.getHost()).port(proxyUri.getPort());
     }
 
     private boolean queueIsNotEmpty() {

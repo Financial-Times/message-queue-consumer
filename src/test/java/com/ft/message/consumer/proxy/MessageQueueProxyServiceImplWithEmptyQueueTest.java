@@ -119,7 +119,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
     @Test
     public void testDestroyConsumerInstanceShouldOverrideConsumerInstanceUri() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://kafka/consumers/binaryIngester/instances/rest-consumer-1-1").build();
-        final URI expectedOverridenUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final URI expectedOverridenUri = UriBuilder.fromUri("http://kafka/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(expectedOverridenUri)).thenReturn(mockedWebResource);
