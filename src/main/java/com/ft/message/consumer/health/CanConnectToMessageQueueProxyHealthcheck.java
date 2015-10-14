@@ -102,7 +102,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
         if (queueIsNotEmpty()) {
             builder.header("Host", configuration.getQueue());
         }
-        return builder.get(ClientResponse.class);
+        return builder.post(ClientResponse.class);
     }
 
     private URI buildMessageReaderUri(URI consumerUri) {
