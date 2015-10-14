@@ -28,7 +28,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class MessageQueueProxyServiceImplTest {
+public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
     private MessageQueueProxyService messageQueueProxyService;
 
@@ -45,7 +45,7 @@ public class MessageQueueProxyServiceImplTest {
                         "CmsPublicationEvent",
                         "binaryIngester",
                         "http://localhost:8082",
-                        "kafka",
+                        "",
                         8000),
                 client);
     }
@@ -70,7 +70,7 @@ public class MessageQueueProxyServiceImplTest {
         assertThat(actualConsumerInstanceUri, is(equalTo(expectedUri)));
 
         verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}");
         verify(mockedResponse, times(1)).close();
     }
@@ -93,7 +93,7 @@ public class MessageQueueProxyServiceImplTest {
 
         assertThat(actualConsumerInstanceUri, nullValue());
         verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedResponse, times(1)).close();
     }
 
@@ -112,14 +112,14 @@ public class MessageQueueProxyServiceImplTest {
         messageQueueProxyService.destroyConsumerInstance(consumerUri);
 
         verify(mockedBuilder).delete(ClientResponse.class);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedResponse, times(1)).close();
     }
 
     @Test
     public void testDestroyConsumerInstanceShouldOverrideConsumerInstanceUri() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://kafka/consumers/binaryIngester/instances/rest-consumer-1-1").build();
-        final URI expectedOverridenUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final URI expectedOverridenUri = UriBuilder.fromUri("http://kafka/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(expectedOverridenUri)).thenReturn(mockedWebResource);
@@ -132,7 +132,7 @@ public class MessageQueueProxyServiceImplTest {
         messageQueueProxyService.destroyConsumerInstance(consumerUri);
 
         verify(mockedBuilder).delete(ClientResponse.class);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(client).resource(expectedOverridenUri);
         verify(mockedResponse, times(1)).close();
     }
@@ -154,7 +154,7 @@ public class MessageQueueProxyServiceImplTest {
         messageQueueProxyService.destroyConsumerInstance(consumerUri);
 
         verify(mockedBuilder).delete(ClientResponse.class);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedResponse, times(1)).close();
     }
 
@@ -174,7 +174,7 @@ public class MessageQueueProxyServiceImplTest {
         List<MessageRecord> actualMessageRecords = messageQueueProxyService.consumeMessages(consumerUri);
 
         assertThat(actualMessageRecords.get(0).getValue(), is(equalTo("myrecord".getBytes())));
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
         verify(mockedResponse, times(1)).close();
     }
@@ -197,7 +197,7 @@ public class MessageQueueProxyServiceImplTest {
 
         assertThat(actualMessageRecords.get(0).getValue(), is(equalTo("myrecord".getBytes())));
         verify(client).resource(UriBuilder.fromUri(expectedOverridenUri).path("topics").path("CmsPublicationEvent").build());
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
         verify(mockedResponse, times(1)).close();
     }
@@ -217,7 +217,7 @@ public class MessageQueueProxyServiceImplTest {
         when(mockedResponse.getStatus()).thenReturn(500);
 
         messageQueueProxyService.consumeMessages(consumerUri);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
         verify(mockedResponse, times(1)).close();
     }

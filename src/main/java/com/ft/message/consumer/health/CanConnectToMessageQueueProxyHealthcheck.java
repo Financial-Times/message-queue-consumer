@@ -7,6 +7,7 @@ import com.ft.platform.dropwizard.AdvancedHealthCheck;
 import com.ft.platform.dropwizard.AdvancedResult;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,38 +74,43 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     }
 
     protected ClientResponse deleteConsumerInstance(URI consumerInstance) {
-        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
-        URI uri = UriBuilder.fromUri(consumerInstance)
-                .host(proxyUri.getHost())
-                .port(proxyUri.getPort())
-                .build();
-        return proxyClient.resource(uri)
-                .header("Host", configuration.getQueue())
-                .delete(ClientResponse.class);
+        UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance);
+        if (queueIsNotEmpty()) {
+            addProxyPortAndHostInUri(uriBuilder);
+        }
+        URI uri = uriBuilder.build();
+
+        WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+        if (queueIsNotEmpty()) {
+            builder.header("Host", configuration.getQueue());
+        }
+        return builder.delete(ClientResponse.class);
     }
 
     protected ClientResponse getClientResponseForMessageConsumer(URI readMessageFromUri) {
-        return proxyClient.resource(readMessageFromUri)
-                .header("Host", configuration.getQueue())
-                .header("Accept", "application/json")
-                .get(ClientResponse.class);
+        WebResource.Builder builder = proxyClient.resource(readMessageFromUri).getRequestBuilder();
+        builder.header("Accept", "application/json");
+        if (queueIsNotEmpty()) {
+            builder.header("Host", configuration.getQueue());
+        }
+        return builder.get(ClientResponse.class);
     }
 
     protected ClientResponse getClientResponseForProxyConnection(URI uri) {
-        return proxyClient.resource(uri)
-                .header("Content-Type", "application/json")
-                .header("Host", configuration.getQueue())
-                .post(ClientResponse.class);
+        WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+        builder.header("Content-Type", "application/json");
+        if (queueIsNotEmpty()) {
+            builder.header("Host", configuration.getQueue());
+        }
+        return builder.get(ClientResponse.class);
     }
 
     private URI buildMessageReaderUri(URI consumerUri) {
-        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
-        return UriBuilder.fromUri(consumerUri)
-                .host(proxyUri.getHost())
-                .port(proxyUri.getPort())
-                .path("topics")
-                .path(configuration.getTopicName())
-                .build();
+        UriBuilder uriBuilder = UriBuilder.fromUri(consumerUri).path("topics").path(configuration.getTopicName());
+        if (queueIsNotEmpty()) {
+            addProxyPortAndHostInUri(uriBuilder);
+        }
+        return uriBuilder.build();
     }
 
     private URI buildConsumerUri() {
@@ -112,6 +118,16 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
                 .path("consumers")
                 .path(groupName)
                 .build();
+    }
+
+
+    private void addProxyPortAndHostInUri(UriBuilder uriBuilder) {
+        URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
+        uriBuilder.host(proxyUri.getHost()).port(proxyUri.getPort());
+    }
+
+    private boolean queueIsNotEmpty() {
+        return configuration.getQueue() != null && !configuration.getQueue().isEmpty();
     }
 
     private AdvancedResult reportUnhealthy(String message) {
