@@ -28,41 +28,57 @@ public class MessageQueueConsumer implements Runnable {
     }
 
     private void consume() {
+        URI consumerInstance = null;
         while (true) {
-            URI consumerInstance = null;
-            List<MessageRecord> messageRecords = null;
             try {
-                consumerInstance = messageQueueProxyService.createConsumerInstance();
-                messageRecords = messageQueueProxyService.consumeMessages(consumerInstance);
-                for (MessageRecord messageRecord : messageRecords) {
-                    Message message = null;
-                    try {
-                        message = Message.parse(messageRecord.getValue());
-                        String transactionId = message.getCustomMessageHeader(TransactionIdUtils.TRANSACTION_ID_HEADER);
-                        MDC.put(TRANSACTION_ID, "transaction_id=" + transactionId);
-                        listener.onMessage(message, transactionId);
-                    } catch (Throwable t) {
-                        LOGGER.error(String.format("outcome=Exception message=\"Error while processing message [%s].\"", message), t);
-                    } finally {
-                        MDC.remove(TRANSACTION_ID);
-                    }
+                if (consumerInstance == null) {
+                    consumerInstance = messageQueueProxyService.createConsumerInstance();
                 }
+                List<MessageRecord> messageRecords = messageQueueProxyService.consumeMessages(consumerInstance);
+                if (messageRecords == null || messageRecords.isEmpty()) {
+                    backOff();
+                }
+                else {
+                    handleMessages(messageRecords);
+                }
+
             } catch (Throwable t) {
                 LOGGER.error("outcome=Exception message=\"Error while communicating with queue proxy.\"", t);
-            } finally {
                 try {
                     if (consumerInstance != null) {
                         messageQueueProxyService.destroyConsumerInstance(consumerInstance);
                     }
-                    if (messageRecords == null || messageRecords.isEmpty()) {
-                        TimeUnit.MILLISECONDS.sleep(backoffPeriod);
-                    }
-                } catch (InterruptedException e) {
-                    LOGGER.warn("Interrupted while sleeping", e);
-                    Thread.currentThread().interrupt();
-                } catch (Throwable t) {
-                    LOGGER.warn("outcome=Exception message=\"Error while destroying consumer instance.\"", t);
+                } catch (Throwable t1) {
+                    LOGGER.error("outcome=Exception message=\"Error while destroying consumer instance.\"", t);
+                } finally {
+                    consumerInstance = null;
+                    backOff();
                 }
+            }
+        }
+    }
+
+    private void backOff() {
+        try {
+            TimeUnit.MILLISECONDS.sleep(backoffPeriod);
+        } catch (InterruptedException e) {
+            LOGGER.warn("Interrupted while sleeping", e);
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void handleMessages(List<MessageRecord> messageRecords) {
+        for (MessageRecord messageRecord : messageRecords) {
+            Message message = null;
+            try {
+                message = Message.parse(messageRecord.getValue());
+                String transactionId = message.getCustomMessageHeader(TransactionIdUtils.TRANSACTION_ID_HEADER);
+                MDC.put(TRANSACTION_ID, "transaction_id=" + transactionId);
+                listener.onMessage(message, transactionId);
+            } catch (Throwable t) {
+                LOGGER.error(String.format("outcome=Exception message=\"Error while processing message [%s].\"", message), t);
+            } finally {
+                MDC.remove(TRANSACTION_ID);
             }
         }
     }
