@@ -47,7 +47,7 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
     @Before
     public void setUp() {
         healtcheckConfiguration = new HealthcheckConfiguration("kafka-proxy", 2, "business impact text", "tech summary", "panic guide url");
-        MessageQueueConsumerConfiguration consumerConfiguration = new MessageQueueConsumerConfiguration(topicName, groupName, proxyHost, "kafka", 8000);
+        MessageQueueConsumerConfiguration consumerConfiguration = new MessageQueueConsumerConfiguration(topicName, groupName, proxyHost, "kafka", 8000, 1, "smallest");
         healthcheck = new CanConnectToMessageQueueProxyHealthcheck(mockClient, consumerConfiguration, healtcheckConfiguration);
     }
 

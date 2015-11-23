@@ -12,7 +12,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class MessageQueueConsumer implements Runnable {
+public class MessageQueueConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageQueueConsumer.class);
     private static final String TRANSACTION_ID = "transaction_id";
@@ -20,6 +20,7 @@ public class MessageQueueConsumer implements Runnable {
     private final MessageListener listener;
     private MessageQueueProxyService messageQueueProxyService;
     private int backoffPeriod;
+    private URI consumerInstance;
 
     public MessageQueueConsumer(MessageQueueProxyService messageQueueProxyService, MessageListener listener, int backoffPeriod) {
         this.listener = listener;
@@ -27,33 +28,32 @@ public class MessageQueueConsumer implements Runnable {
         this.backoffPeriod = backoffPeriod;
     }
 
-    private void consume() {
-        URI consumerInstance = null;
-        while (true) {
+    public void consume() {
+        try {
+            if (consumerInstance == null) {
+                consumerInstance = messageQueueProxyService.createConsumerInstance();
+            }
+            List<MessageRecord> messageRecords = messageQueueProxyService.consumeMessages(consumerInstance);
+            if (messageRecords == null || messageRecords.isEmpty()) {
+                backOff();
+            } else {
+                handleMessages(messageRecords);
+                messageQueueProxyService.commitOffsets(consumerInstance);
+            }
+            if(Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
+        } catch (Throwable t) {
+            LOGGER.error("outcome=Exception message=\"Error while communicating with queue proxy.\"", t);
             try {
-                if (consumerInstance == null) {
-                    consumerInstance = messageQueueProxyService.createConsumerInstance();
+                if (consumerInstance != null) {
+                    messageQueueProxyService.destroyConsumerInstance(consumerInstance);
                 }
-                List<MessageRecord> messageRecords = messageQueueProxyService.consumeMessages(consumerInstance);
-                if (messageRecords == null || messageRecords.isEmpty()) {
-                    backOff();
-                }
-                else {
-                    handleMessages(messageRecords);
-                }
-
-            } catch (Throwable t) {
-                LOGGER.error("outcome=Exception message=\"Error while communicating with queue proxy.\"", t);
-                try {
-                    if (consumerInstance != null) {
-                        messageQueueProxyService.destroyConsumerInstance(consumerInstance);
-                    }
-                } catch (Throwable t1) {
-                    LOGGER.error("outcome=Exception message=\"Error while destroying consumer instance.\"", t);
-                } finally {
-                    consumerInstance = null;
-                    backOff();
-                }
+            } catch (Throwable t1) {
+                LOGGER.error("outcome=Exception message=\"Error while destroying consumer instance.\"", t);
+            } finally {
+                consumerInstance = null;
+                backOff();
             }
         }
     }
@@ -67,8 +67,11 @@ public class MessageQueueConsumer implements Runnable {
         }
     }
 
-    private void handleMessages(List<MessageRecord> messageRecords) {
+    private void handleMessages(List<MessageRecord> messageRecords) throws InterruptedException{
         for (MessageRecord messageRecord : messageRecords) {
+            if(Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
             Message message = null;
             try {
                 message = Message.parse(messageRecord.getValue());
@@ -81,10 +84,5 @@ public class MessageQueueConsumer implements Runnable {
                 MDC.remove(TRANSACTION_ID);
             }
         }
-    }
-
-    @Override
-    public void run() {
-        consume();
     }
 }
