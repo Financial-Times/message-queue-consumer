@@ -86,7 +86,7 @@ public class MessageQueueConsumerTest {
         LocalTime timestamp = LocalTime.now();
         messageQueueConsumer.consume();
 
-        assertThat(LocalTime.now().isAfter(timestamp.plus(1000, ChronoUnit.MILLIS)), is(true));
+        assertThat(LocalTime.now().isAfter(timestamp.plus(999, ChronoUnit.MILLIS)), is(true));
         verify(messageQueueProxyService, never()).commitOffsets(consumerInstance);
         verify(messageListener, never()).onMessage(any(Message.class), any(String.class));
         verify(messageQueueProxyService).destroyConsumerInstance(consumerInstance);
@@ -101,7 +101,7 @@ public class MessageQueueConsumerTest {
         LocalTime timestamp = LocalTime.now();
         messageQueueConsumer.consume();
 
-        assertThat(LocalTime.now().isAfter(timestamp.plus(1000, ChronoUnit.MILLIS)), is(true));
+        assertThat(LocalTime.now().isAfter(timestamp.plus(999, ChronoUnit.MILLIS)), is(true));
         verify(messageQueueProxyService, never()).commitOffsets(any(URI.class));
         verify(messageListener, never()).onMessage(any(Message.class), any(String.class));
         verify(messageQueueProxyService, never()).destroyConsumerInstance(any(URI.class));
@@ -118,7 +118,7 @@ public class MessageQueueConsumerTest {
         LocalTime timestamp = LocalTime.now();
         messageQueueConsumer.consume();
 
-        assertThat(LocalTime.now().isAfter(timestamp.plus(1000, ChronoUnit.MILLIS)), is(true));
+        assertThat(LocalTime.now().isAfter(timestamp.plus(999, ChronoUnit.MILLIS)), is(true));
         verify(messageQueueProxyService).consumeMessages(consumerInstance);
         verify(messageListener, never()).onMessage(any(Message.class), any(String.class));
         verify(messageQueueProxyService, never()).commitOffsets(consumerInstance);
@@ -137,7 +137,7 @@ public class MessageQueueConsumerTest {
         LocalTime timestamp = LocalTime.now();
         messageQueueConsumer.consume();
 
-        assertThat(LocalTime.now().isAfter(timestamp.plus(1000, ChronoUnit.MILLIS)), is(true));
+        assertThat(LocalTime.now().isAfter(timestamp.plus(999, ChronoUnit.MILLIS)), is(true));
         verify(messageListener, never()).onMessage(any(Message.class), any(String.class));
         verify(messageQueueProxyService, never()).commitOffsets(consumerInstance);
         verify(messageQueueProxyService).consumeMessages(consumerInstance);
