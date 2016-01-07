@@ -37,7 +37,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
-            clientResponse = builder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}");
+            clientResponse = builder.post(ClientResponse.class, String.format("{\"auto.offset.reset\": \"%s\", \"auto.commit.enable\": \"false\"}", configuration.getOffsetReset()));
 
             if (clientResponse.getStatus() != 200) {
                 throw new QueueProxyServiceException(String.format("Unable to create consumer instance. Proxy returned %d", clientResponse.getStatus()));
@@ -104,6 +104,34 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
 
             return clientResponse.getEntity(new GenericType<List<MessageRecord>>() {
             });
+        } finally {
+            if (clientResponse != null) {
+                clientResponse.close();
+            }
+        }
+    }
+
+    @Override
+    public void commitOffsets(URI consumerInstance) {
+        ClientResponse clientResponse = null;
+        try {
+
+            UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance).path("offsets");
+            if (queueIsNotEmpty()) {
+                addProxyPortAndHostInUri(uriBuilder);
+            }
+            URI uri = uriBuilder.build();
+
+            WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            if (queueIsNotEmpty()) {
+                builder.header("Host", configuration.getQueue());
+            }
+
+            clientResponse = builder.post(ClientResponse.class);
+
+            if (clientResponse.getStatus() != 200) {
+                throw new QueueProxyServiceException(String.format("Unable to commit offsets. Proxy returned %d", clientResponse.getStatus()));
+            }
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();

@@ -46,7 +46,7 @@ public class MessageQueueProxyServiceImplTest {
                         "binaryIngester",
                         "http://localhost:8082",
                         "kafka",
-                        8000),
+                        8000, 1, "smallest"),
                 client);
     }
 
@@ -61,7 +61,7 @@ public class MessageQueueProxyServiceImplTest {
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
 
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
+        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(200);
         when(mockedResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(new CreateConsumerInstanceResponse(expectedUri));
 
@@ -71,7 +71,7 @@ public class MessageQueueProxyServiceImplTest {
 
         verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}");
+        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}");
         verify(mockedResponse, times(1)).close();
     }
 
@@ -86,7 +86,7 @@ public class MessageQueueProxyServiceImplTest {
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
+        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
@@ -221,4 +221,66 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
         verify(mockedResponse, times(1)).close();
     }
+
+    @Test
+    public void testCommitOffsets() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("offsets").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.post(ClientResponse.class)).thenReturn(mockedResponse);
+        when(mockedResponse.getStatus()).thenReturn(200);
+
+        messageQueueProxyService.commitOffsets(consumerUri);
+
+        verify(mockedBuilder).post(ClientResponse.class);
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedResponse, times(1)).close();
+    }
+
+    @Test
+    public void testCommitOffsetsShouldOverrideConsumerInstanceUri() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://kafka/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final URI expectedOverridenUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1/offsets").build();
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(expectedOverridenUri)).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.post(ClientResponse.class)).thenReturn(mockedResponse);
+        when(mockedResponse.getStatus()).thenReturn(200);
+
+        messageQueueProxyService.commitOffsets(consumerUri);
+
+        verify(mockedBuilder).post(ClientResponse.class);
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(client).resource(expectedOverridenUri);
+        verify(mockedResponse, times(1)).close();
+    }
+
+    @Test
+    public void testCommitOffsetsWhenErrorOccurs() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        expectedException.expect(QueueProxyServiceException.class);
+        expectedException.expectMessage("Unable to commit offsets. Proxy returned 500");
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("offsets").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.post(ClientResponse.class)).thenReturn(mockedResponse);
+        when(mockedResponse.getStatus()).thenReturn(500);
+
+        messageQueueProxyService.commitOffsets(consumerUri);
+
+        verify(mockedBuilder).post(ClientResponse.class);
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedResponse, times(1)).close();
+    }
+
 }
