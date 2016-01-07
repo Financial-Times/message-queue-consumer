@@ -61,7 +61,7 @@ public class MessageQueueProxyServiceImplTest {
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
 
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
+        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(200);
         when(mockedResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(new CreateConsumerInstanceResponse(expectedUri));
 
@@ -71,7 +71,7 @@ public class MessageQueueProxyServiceImplTest {
 
         verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}");
+        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}");
         verify(mockedResponse, times(1)).close();
     }
 
@@ -86,7 +86,7 @@ public class MessageQueueProxyServiceImplTest {
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
+        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
