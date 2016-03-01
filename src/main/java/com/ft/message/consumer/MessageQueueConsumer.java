@@ -21,11 +21,13 @@ public class MessageQueueConsumer {
     private MessageQueueProxyService messageQueueProxyService;
     private int backoffPeriod;
     private URI consumerInstance;
+    private boolean autoCommit;
 
-    public MessageQueueConsumer(MessageQueueProxyService messageQueueProxyService, MessageListener listener, int backoffPeriod) {
+    public MessageQueueConsumer(MessageQueueProxyService messageQueueProxyService, MessageListener listener, int backoffPeriod, boolean autoCommit) {
         this.listener = listener;
         this.messageQueueProxyService = messageQueueProxyService;
         this.backoffPeriod = backoffPeriod;
+        this.autoCommit = autoCommit;
     }
 
     public void consume() {
@@ -38,7 +40,9 @@ public class MessageQueueConsumer {
                 backOff();
             } else {
                 handleMessages(messageRecords);
-                messageQueueProxyService.commitOffsets(consumerInstance);
+                if(!autoCommit) {
+                    messageQueueProxyService.commitOffsets(consumerInstance);
+                }
             }
             if(Thread.currentThread().isInterrupted()) {
                 throw new InterruptedException();

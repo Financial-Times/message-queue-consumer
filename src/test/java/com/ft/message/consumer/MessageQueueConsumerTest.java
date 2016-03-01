@@ -40,7 +40,7 @@ public class MessageQueueConsumerTest {
 
     @Test
     public void testConsume() throws Exception {
-        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1);
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
@@ -57,8 +57,25 @@ public class MessageQueueConsumerTest {
     }
 
     @Test
+    public void testConsumeShouldNotCommitOffsetsForAutocommit() throws Exception {
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1, true);
+        final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+
+        when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
+        when(messageQueueProxyService.consumeMessages(consumerInstance)).thenReturn(ImmutableList.of(new MessageRecord(MESSAGE.getBytes())));
+        when(messageListener.onMessage(Message.parse(MESSAGE.getBytes()), "SYNTHETIC-REQ-MON_b47A5AvpIr")).thenReturn(true);
+
+        messageQueueConsumer.consume();
+
+        verify(messageQueueProxyService).consumeMessages(consumerInstance);
+        verify(messageListener).onMessage(any(Message.class), eq("SYNTHETIC-REQ-MON_b47A5AvpIr"));
+        verify(messageQueueProxyService, never()).commitOffsets(consumerInstance);
+        verify(messageQueueProxyService, never()).destroyConsumerInstance(consumerInstance);
+    }
+
+    @Test
     public void testConsumeShouldSkipInvalidMessage() throws Exception {
-        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1);
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
@@ -75,7 +92,7 @@ public class MessageQueueConsumerTest {
 
     @Test
     public void testConsumeShouldDestroyConsumerAndBackOffInstanceWhenExceptionOccurs() throws Exception {
-        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000);
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
@@ -93,7 +110,7 @@ public class MessageQueueConsumerTest {
 
     @Test
     public void testConsumeShouldNotDestroyAndBackOffWhenConsumerInstanceWhenNull() throws Exception {
-        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000);
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
 
         when(messageQueueProxyService.createConsumerInstance()).thenThrow(new QueueProxyServiceException("Could not reach the proxy"));
 
@@ -108,7 +125,7 @@ public class MessageQueueConsumerTest {
 
     @Test
     public void testConsumeShouldBackOffWhenQueueIsEmpty() throws Exception {
-        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000);
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
@@ -126,7 +143,7 @@ public class MessageQueueConsumerTest {
 
     @Test
     public void testConsumeShouldBackOffWhenUnableToDestroyConsumerInstance() throws Exception {
-        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000);
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
@@ -145,7 +162,7 @@ public class MessageQueueConsumerTest {
 
     @Test
     public void testConsumeShouldDestroyConsumerInstanceWhenThreadInterruptedAndQueueNotEmpty() throws Exception {
-        final MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000);
+        final MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
@@ -169,7 +186,7 @@ public class MessageQueueConsumerTest {
 
     @Test
     public void testConsumeShouldDestroyConsumerInstanceWhenThreadInterruptedAndQueueEmpty() throws Exception {
-        final MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000);
+        final MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);

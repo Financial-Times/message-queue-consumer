@@ -46,7 +46,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
                         "binaryIngester",
                         "http://localhost:8082",
                         "",
-                        8000, 1, "smallest"),
+                        8000, 1, "smallest", false),
                 client);
     }
 

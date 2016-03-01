@@ -37,7 +37,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
-            clientResponse = builder.post(ClientResponse.class, String.format("{\"auto.offset.reset\": \"%s\", \"auto.commit.enable\": \"false\"}", configuration.getOffsetReset()));
+            clientResponse = builder.post(ClientResponse.class, String.format("{\"auto.offset.reset\": \"%s\", \"auto.commit.enable\": \"%b\"}", configuration.getOffsetReset(), configuration.isAutoCommit()));
 
             if (clientResponse.getStatus() != 200) {
                 throw new QueueProxyServiceException(String.format("Unable to create consumer instance. Proxy returned %d", clientResponse.getStatus()));
