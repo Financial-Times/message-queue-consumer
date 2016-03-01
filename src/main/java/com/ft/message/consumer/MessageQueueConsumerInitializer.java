@@ -47,7 +47,8 @@ public class MessageQueueConsumerInitializer implements Managed {
             startupExecutor.submit(new InfiniteStreamHandler(new MessageQueueConsumer(
                     messageQueueProxyService,
                     messageListener,
-                    messageQueueConsumerConfiguration.getBackoffPeriod())));
+                    messageQueueConsumerConfiguration.getBackoffPeriod(),
+                    messageQueueConsumerConfiguration.isAutoCommit())));
         }
         LOGGER.info("Lazy start for ReceivedMessagesHandler executed");
     }

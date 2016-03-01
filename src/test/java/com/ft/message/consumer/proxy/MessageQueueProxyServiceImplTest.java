@@ -46,7 +46,7 @@ public class MessageQueueProxyServiceImplTest {
                         "binaryIngester",
                         "http://localhost:8082",
                         "kafka",
-                        8000, 1, "smallest"),
+                        8000, 1, "smallest", false),
                 client);
     }
 
@@ -72,6 +72,39 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}");
+        verify(mockedResponse, times(1)).close();
+    }
+
+    @Test
+    public void testCreateConsumerInstanceWithAutocommit() throws Exception {
+        MessageQueueProxyService messageQueueProxyService = new MessageQueueProxyServiceImpl(
+                new MessageQueueConsumerConfiguration(
+                        "CmsPublicationEvent",
+                        "binaryIngester",
+                        "http://localhost:8082",
+                        "kafka",
+                        8000, 1, "smallest", true),
+                client);
+
+        final URI expectedUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
+        when(mockedResponse.getStatus()).thenReturn(200);
+        when(mockedResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(new CreateConsumerInstanceResponse(expectedUri));
+
+        URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
+
+        assertThat(actualConsumerInstanceUri, is(equalTo(expectedUri)));
+
+        verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}");
         verify(mockedResponse, times(1)).close();
     }
 
