@@ -5,6 +5,7 @@ import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
 import com.ft.message.consumer.proxy.model.MessageRecord;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
@@ -131,6 +132,27 @@ public class MessageQueueProxyServiceImplTest {
     }
 
     @Test
+    public void testCreateConsumerInstanceWhenTimeoutOccurs() throws Exception {
+
+        expectedException.expect(QueueProxyServiceException.class);
+        expectedException.expectMessage("Unable to create consumer instance. Proxy error.");
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.post(eq(ClientResponse.class), anyString())).thenThrow(new ClientHandlerException("test timeout"));
+
+        URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
+
+        assertThat(actualConsumerInstanceUri, nullValue());
+        verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedResponse, times(1)).close();
+    }
+
+    @Test
     public void testDestroyConsumerInstance() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
@@ -183,6 +205,26 @@ public class MessageQueueProxyServiceImplTest {
         final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.delete(ClientResponse.class)).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
+
+        messageQueueProxyService.destroyConsumerInstance(consumerUri);
+
+        verify(mockedBuilder).delete(ClientResponse.class);
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedResponse, times(1)).close();
+    }
+
+    @Test
+    public void testDestroyConsumerInstanceWhenTimeoutOccurs() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        expectedException.expect(QueueProxyServiceException.class);
+        expectedException.expectMessage("Unable to destroy consumer instance. Proxy error.");
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(consumerUri)).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.delete(ClientResponse.class)).thenThrow(new ClientHandlerException("test timeout"));
 
         messageQueueProxyService.destroyConsumerInstance(consumerUri);
 
@@ -256,6 +298,25 @@ public class MessageQueueProxyServiceImplTest {
     }
 
     @Test
+    public void testConsumeMessagesWhenTimeoutOccurs() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        expectedException.expect(QueueProxyServiceException.class);
+        expectedException.expectMessage("Unable to consume messages. Proxy error.");
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("topics").path("CmsPublicationEvent").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.get(ClientResponse.class)).thenThrow(new ClientHandlerException("test timeout"));
+
+        messageQueueProxyService.consumeMessages(consumerUri);
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
+        verify(mockedResponse, times(1)).close();
+    }
+
+    @Test
     public void testCommitOffsets() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
@@ -308,6 +369,26 @@ public class MessageQueueProxyServiceImplTest {
         final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.post(ClientResponse.class)).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
+
+        messageQueueProxyService.commitOffsets(consumerUri);
+
+        verify(mockedBuilder).post(ClientResponse.class);
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedResponse, times(1)).close();
+    }
+
+    @Test
+    public void testCommitOffsetsWhenTimeoutOccurs() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        expectedException.expect(QueueProxyServiceException.class);
+        expectedException.expectMessage("Unable to commit offsets. Proxy error.");
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("offsets").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.post(ClientResponse.class)).thenThrow(new ClientHandlerException("test timeout"));
 
         messageQueueProxyService.commitOffsets(consumerUri);
 

@@ -5,6 +5,9 @@ import com.ft.message.consumer.proxy.QueueProxyServiceException;
 import com.ft.message.consumer.proxy.model.MessageRecord;
 import com.ft.messaging.standards.message.v1.Message;
 import com.google.common.collect.ImmutableList;
+
+import ch.qos.logback.classic.Logger;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -18,9 +21,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.ft.message.consumer.LoggingTestHelper.assertLogEvent;
+import static com.ft.message.consumer.LoggingTestHelper.assertNoLogEvent;
+import static com.ft.message.consumer.LoggingTestHelper.configureMockAppenderFor;
+import static com.ft.message.consumer.LoggingTestHelper.resetLoggingFor;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class MessageQueueConsumerTest {
@@ -91,13 +104,16 @@ public class MessageQueueConsumerTest {
     }
 
     @Test
-    public void testConsumeShouldDestroyConsumerAndBackOffInstanceWhenExceptionOccurs() throws Exception {
+    public void testConsumeShouldAttemptToDestroyConsumerAndBackOffInstanceWhenBrokerExceptionOccurs() throws Exception {
+      try {
+        Logger logger = configureMockAppenderFor(MessageQueueConsumer.class);
+
         MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
         final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
         when(messageQueueProxyService.consumeMessages(consumerInstance)).thenThrow(new QueueProxyServiceException("Could not reach the proxy"));
-        doNothing().when(messageQueueProxyService).destroyConsumerInstance(consumerInstance);
+        doThrow(new QueueProxyServiceException("could not destroy consumer instance")).when(messageQueueProxyService).destroyConsumerInstance(consumerInstance);
 
         LocalTime timestamp = LocalTime.now();
         messageQueueConsumer.consume();
@@ -106,6 +122,39 @@ public class MessageQueueConsumerTest {
         verify(messageQueueProxyService, never()).commitOffsets(consumerInstance);
         verify(messageListener, never()).onMessage(any(Message.class), any(String.class));
         verify(messageQueueProxyService).destroyConsumerInstance(consumerInstance);
+        
+        assertLogEvent(logger, "QueueProxyServiceException");
+        
+      } finally {
+        resetLoggingFor(MessageQueueConsumer.class);
+      }
+    }
+
+    @Test
+    public void testConsumeShouldDestroyConsumerAndBackOffInstanceWhenApplicationExceptionOccurs() throws Exception {
+      try {
+        Logger logger = configureMockAppenderFor(MessageQueueConsumer.class);
+
+        MessageQueueConsumer messageQueueConsumer = new MessageQueueConsumer(messageQueueProxyService, messageListener, 1000, false);
+        final URI consumerInstance = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+
+        when(messageQueueProxyService.createConsumerInstance()).thenReturn(consumerInstance);
+        when(messageQueueProxyService.consumeMessages(consumerInstance)).thenThrow(new RuntimeException("test application exception"));
+        doNothing().when(messageQueueProxyService).destroyConsumerInstance(consumerInstance);
+
+        LocalTime timestamp = LocalTime.now();
+        messageQueueConsumer.consume();
+
+        assertThat(LocalTime.now().isAfter(timestamp.plus(999, ChronoUnit.MILLIS)), is(true));
+        verify(messageQueueProxyService, never()).commitOffsets(consumerInstance); // really?
+        verify(messageListener, never()).onMessage(any(Message.class), any(String.class));
+        verify(messageQueueProxyService).destroyConsumerInstance(consumerInstance);
+        
+        assertNoLogEvent(logger, "QueueProxyServiceException");
+        
+      } finally {
+        resetLoggingFor(MessageQueueConsumer.class);
+      }
     }
 
     @Test

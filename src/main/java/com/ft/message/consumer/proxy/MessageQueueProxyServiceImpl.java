@@ -4,8 +4,10 @@ import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
 import com.ft.message.consumer.proxy.model.MessageRecord;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
+import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 
 import javax.ws.rs.core.UriBuilder;
@@ -43,6 +45,8 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                 throw new QueueProxyServiceException(String.format("Unable to create consumer instance. Proxy returned %d", clientResponse.getStatus()));
             }
             return clientResponse.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
+        } catch (ClientHandlerException | UniformInterfaceException e) {
+            throw new QueueProxyServiceException("Unable to create consumer instance. Proxy error.", e);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -71,6 +75,8 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             if (clientResponse.getStatus() != 204) {
                 throw new QueueProxyServiceException(String.format("Unable to destroy consumer instance. Proxy returned %d", clientResponse.getStatus()));
             }
+        } catch (ClientHandlerException | UniformInterfaceException e) {
+          throw new QueueProxyServiceException("Unable to destroy consumer instance. Proxy error.", e);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -104,6 +110,8 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
 
             return clientResponse.getEntity(new GenericType<List<MessageRecord>>() {
             });
+        } catch (ClientHandlerException | UniformInterfaceException e) {
+          throw new QueueProxyServiceException("Unable to consume messages. Proxy error.", e);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -132,6 +140,8 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             if (clientResponse.getStatus() != 200) {
                 throw new QueueProxyServiceException(String.format("Unable to commit offsets. Proxy returned %d", clientResponse.getStatus()));
             }
+        } catch (ClientHandlerException | UniformInterfaceException e) {
+          throw new QueueProxyServiceException("Unable to commit offsets. Proxy error.", e);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
