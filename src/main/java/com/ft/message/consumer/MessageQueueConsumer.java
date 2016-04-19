@@ -2,6 +2,7 @@ package com.ft.message.consumer;
 
 import com.ft.api.util.transactionid.TransactionIdUtils;
 import com.ft.message.consumer.proxy.MessageQueueProxyService;
+import com.ft.message.consumer.proxy.QueueProxyServiceException;
 import com.ft.message.consumer.proxy.model.MessageRecord;
 import com.ft.messaging.standards.message.v1.Message;
 import org.slf4j.Logger;
@@ -47,21 +48,28 @@ public class MessageQueueConsumer {
             if(Thread.currentThread().isInterrupted()) {
                 throw new InterruptedException();
             }
+        } catch (QueueProxyServiceException e) {
+          resetConsumer("Error while communicating with queue proxy.", e);
         } catch (Throwable t) {
-            LOGGER.error("outcome=Exception message=\"Error while communicating with queue proxy.\"", t);
-            try {
-                if (consumerInstance != null) {
-                    messageQueueProxyService.destroyConsumerInstance(consumerInstance);
-                }
-            } catch (Throwable t1) {
-                LOGGER.error("outcome=Exception message=\"Error while destroying consumer instance.\"", t);
-            } finally {
-                consumerInstance = null;
-                backOff();
-            }
+          resetConsumer(t.getMessage(), t);
         }
     }
-
+    
+    private void resetConsumer(String reason, Throwable t) {
+      String msg = reason;
+      try {
+          if (consumerInstance != null) {
+              messageQueueProxyService.destroyConsumerInstance(consumerInstance);
+          }
+      } catch (Throwable t1) {
+        msg += "; Error while destroying consumer instance.";
+      } finally {
+        LOGGER.error(String.format("outcome=Exception message=\"%s\"", msg), t);
+          consumerInstance = null;
+          backOff();
+      }
+    }
+    
     private void backOff() {
         try {
             TimeUnit.MILLISECONDS.sleep(backoffPeriod);
