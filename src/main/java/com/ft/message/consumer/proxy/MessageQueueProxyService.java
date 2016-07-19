@@ -6,6 +6,7 @@ import java.net.URI;
 import java.util.List;
 
 public interface MessageQueueProxyService {
+    static final String MESSAGES_CONSUMED = "Most recent read consumed %s message(s).";
 
     URI createConsumerInstance();
 
@@ -14,4 +15,6 @@ public interface MessageQueueProxyService {
     List<MessageRecord> consumeMessages(URI consumerInstance);
 
     void commitOffsets(URI consumerInstance);
+    
+    String getStatus();
 }

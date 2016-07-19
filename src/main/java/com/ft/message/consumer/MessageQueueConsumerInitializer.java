@@ -1,8 +1,13 @@
 package com.ft.message.consumer;
 
+import static java.util.Objects.requireNonNull;
+
+import com.ft.message.consumer.config.HealthcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
+import com.ft.message.consumer.health.PassiveMessageQueueProxyConsumerHealthcheck;
 import com.ft.message.consumer.proxy.MessageQueueProxyService;
 import com.ft.message.consumer.proxy.MessageQueueProxyServiceImpl;
+import com.ft.platform.dropwizard.AdvancedHealthCheck;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
@@ -19,30 +24,35 @@ public class MessageQueueConsumerInitializer implements Managed {
     private final MessageQueueConsumerConfiguration messageQueueConsumerConfiguration;
     private final MessageListener messageListener;
     private final Client queueProxyClient;
+    private final MessageQueueProxyService messageQueueProxyService;
     final ExecutorService startupExecutor;
-
+    private final HealthcheckConfiguration healthcheckConfiguration;
+    
     public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
                                            MessageListener listener,
                                            Client queueProxyClient) {
-        this.queueProxyClient = queueProxyClient;
-        this.messageQueueConsumerConfiguration = consumerConfiguration;
-        this.messageListener = listener;
-        startupExecutor = Executors.newFixedThreadPool(consumerConfiguration.getStreamCount());
+      
+        this(consumerConfiguration, listener, queueProxyClient, null, null);
     }
 
     public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
                                            MessageListener listener,
                                            Client queueProxyClient,
-                                           ExecutorService executorService) {
+                                           ExecutorService executorService,
+                                           HealthcheckConfiguration healthcheckConfiguration) {
+      
         this.queueProxyClient = queueProxyClient;
         this.messageQueueConsumerConfiguration = consumerConfiguration;
         this.messageListener = listener;
-        this.startupExecutor = executorService;
+        this.startupExecutor = executorService != null ?
+            executorService : Executors.newFixedThreadPool(consumerConfiguration.getStreamCount());
+        this.healthcheckConfiguration = healthcheckConfiguration;
+        this.messageQueueProxyService =
+            new MessageQueueProxyServiceImpl(messageQueueConsumerConfiguration, queueProxyClient);
     }
 
     @Override
     public void start() throws Exception {
-        MessageQueueProxyService messageQueueProxyService = new MessageQueueProxyServiceImpl(messageQueueConsumerConfiguration, queueProxyClient);
         for (int i = 0; i < messageQueueConsumerConfiguration.getStreamCount(); i++) {
             startupExecutor.submit(new InfiniteStreamHandler(new MessageQueueConsumer(
                     messageQueueProxyService,
@@ -60,7 +70,14 @@ public class MessageQueueConsumerInitializer implements Managed {
         startupExecutor.shutdownNow();
         startupExecutor.awaitTermination(10, TimeUnit.SECONDS);
     }
-
+    
+    public AdvancedHealthCheck getPassiveConsumerHealthcheck() {
+      requireNonNull(healthcheckConfiguration);
+      
+      return new PassiveMessageQueueProxyConsumerHealthcheck(
+          healthcheckConfiguration, messageQueueProxyService);
+    }
+    
     final static class InfiniteStreamHandler implements Runnable {
 
         private final MessageQueueConsumer messageQueueConsumer;
