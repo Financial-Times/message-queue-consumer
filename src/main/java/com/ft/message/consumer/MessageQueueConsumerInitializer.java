@@ -1,7 +1,6 @@
 package com.ft.message.consumer;
 
-import static java.util.Objects.requireNonNull;
-
+import com.codahale.metrics.MetricRegistry;
 import com.ft.message.consumer.config.HealthcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.health.PassiveMessageQueueProxyConsumerHealthcheck;
@@ -26,27 +25,24 @@ public class MessageQueueConsumerInitializer implements Managed {
     private final Client queueProxyClient;
     private final MessageQueueProxyService messageQueueProxyService;
     final ExecutorService startupExecutor;
-    private final HealthcheckConfiguration healthcheckConfiguration;
     
     public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
                                            MessageListener listener,
                                            Client queueProxyClient) {
       
-        this(consumerConfiguration, listener, queueProxyClient, null, null);
+        this(consumerConfiguration, listener, queueProxyClient, null);
     }
 
     public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
                                            MessageListener listener,
                                            Client queueProxyClient,
-                                           ExecutorService executorService,
-                                           HealthcheckConfiguration healthcheckConfiguration) {
+                                           ExecutorService executorService) {
       
         this.queueProxyClient = queueProxyClient;
         this.messageQueueConsumerConfiguration = consumerConfiguration;
         this.messageListener = listener;
         this.startupExecutor = executorService != null ?
             executorService : Executors.newFixedThreadPool(consumerConfiguration.getStreamCount());
-        this.healthcheckConfiguration = healthcheckConfiguration;
         this.messageQueueProxyService =
             new MessageQueueProxyServiceImpl(messageQueueConsumerConfiguration, queueProxyClient);
     }
@@ -71,11 +67,11 @@ public class MessageQueueConsumerInitializer implements Managed {
         startupExecutor.awaitTermination(10, TimeUnit.SECONDS);
     }
     
-    public AdvancedHealthCheck getPassiveConsumerHealthcheck() {
-      requireNonNull(healthcheckConfiguration);
+    public AdvancedHealthCheck buildPassiveConsumerHealthcheck(
+        HealthcheckConfiguration healthcheckConfiguration, MetricRegistry metrics) {
       
       return new PassiveMessageQueueProxyConsumerHealthcheck(
-          healthcheckConfiguration, messageQueueProxyService);
+          healthcheckConfiguration, messageQueueProxyService, metrics);
     }
     
     final static class InfiniteStreamHandler implements Runnable {

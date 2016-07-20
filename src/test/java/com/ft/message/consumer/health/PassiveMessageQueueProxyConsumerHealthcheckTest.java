@@ -32,7 +32,7 @@ public class PassiveMessageQueueProxyConsumerHealthcheckTest {
   
   @Before
   public void setUp() {
-    healthcheck = new PassiveMessageQueueProxyConsumerHealthcheck(config, service);
+    healthcheck = new PassiveMessageQueueProxyConsumerHealthcheck(config, service, null);
   }
   
   @Test

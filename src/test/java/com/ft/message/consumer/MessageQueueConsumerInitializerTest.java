@@ -44,7 +44,7 @@ public class MessageQueueConsumerInitializerTest {
 
     @Test
     public void testStop() throws Exception {
-        new MessageQueueConsumerInitializer(messageQueueConsumerConfiguration, messageListener, client, executorService, healthcheckConfiguration).stop();
+        new MessageQueueConsumerInitializer(messageQueueConsumerConfiguration, messageListener, client, executorService).stop();
 
         verify(client).destroy();
         verify(executorService).shutdownNow();
@@ -54,7 +54,7 @@ public class MessageQueueConsumerInitializerTest {
     @Test
     public void testStart() throws Exception {
         when(messageQueueConsumerConfiguration.getStreamCount()).thenReturn(5);
-        new MessageQueueConsumerInitializer(messageQueueConsumerConfiguration, messageListener, client, executorService, healthcheckConfiguration).start();
+        new MessageQueueConsumerInitializer(messageQueueConsumerConfiguration, messageListener, client, executorService).start();
 
         verify(executorService, times(5)).submit(any(MessageQueueConsumerInitializer.InfiniteStreamHandler.class));
     }
@@ -73,9 +73,9 @@ public class MessageQueueConsumerInitializerTest {
     public void thatHealthcheckIsSupplied() {
       MessageQueueConsumerInitializer initializer = new MessageQueueConsumerInitializer(
           messageQueueConsumerConfiguration, messageListener, client,
-          executorService, healthcheckConfiguration);
+          executorService);
       
-      AdvancedHealthCheck actual = initializer.getPassiveConsumerHealthcheck();
+      AdvancedHealthCheck actual = initializer.buildPassiveConsumerHealthcheck(healthcheckConfiguration, null);
       assertThat(actual, notNullValue());
     }
     
@@ -86,6 +86,6 @@ public class MessageQueueConsumerInitializerTest {
       MessageQueueConsumerInitializer initializer = new MessageQueueConsumerInitializer(
           messageQueueConsumerConfiguration, messageListener, client);
       
-      initializer.getPassiveConsumerHealthcheck();
+      initializer.buildPassiveConsumerHealthcheck(null, null);
     }
 }
