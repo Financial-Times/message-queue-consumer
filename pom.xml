@@ -6,7 +6,7 @@
 
     <groupId>com.ft</groupId>
     <artifactId>message-queue-consumer</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
 
     <packaging>jar</packaging>
     <name>Message queue consumer</name>
@@ -62,6 +62,11 @@
                     <artifactId>jetty-server</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.codahale.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>3.0.2</version>
         </dependency>
         <dependency>
             <groupId>com.ft</groupId>

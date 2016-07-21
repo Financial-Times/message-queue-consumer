@@ -15,16 +15,39 @@ import java.net.URI;
 import java.util.List;
 
 public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
-
+    private static final String PROXY_ERR = "Unable to %s. Proxy error.";
+    private static final String PROXY_STATUS_ERR = "Unable to %s. Proxy returned %d";
+    private static final String CREATE = "create consumer instance";
+    private static final String CONSUME = "consume messages";
+    private static final String COMMIT = "commit offsets";
+    private static final String DESTROY = "destroy consumer instance";
+    
+    private static final int SC_NO_CONTENT = ClientResponse.Status.NO_CONTENT.getStatusCode();
+    private static final int SC_OK = ClientResponse.Status.OK.getStatusCode();
+    
     private MessageQueueConsumerConfiguration configuration;
     private Client proxyClient;
-
+    private String status = String.format(MESSAGES_CONSUMED, 0);
+    
     public MessageQueueProxyServiceImpl(MessageQueueConsumerConfiguration configuration, Client proxyClient) {
         this.configuration = configuration;
         this.proxyClient = proxyClient;
     }
 
-
+    private void checkStatus(ClientResponse response, int expectedStatus, String action) {
+      if (response.getStatus() != expectedStatus) {
+        String msg = String.format(PROXY_STATUS_ERR, action, response.getStatus());
+        updateUnhealthyStatus(msg);
+        throw new QueueProxyServiceException(msg);
+      }
+    }
+    
+    private QueueProxyServiceException proxyException(Throwable e, String action) {
+      String msg = String.format(PROXY_ERR, action);
+      updateUnhealthyStatus(msg);
+      return new QueueProxyServiceException(msg, e);
+    }
+    
     @Override
     public URI createConsumerInstance() {
         ClientResponse clientResponse = null;
@@ -40,13 +63,10 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                 builder.header("Host", configuration.getQueue());
             }
             clientResponse = builder.post(ClientResponse.class, String.format("{\"auto.offset.reset\": \"%s\", \"auto.commit.enable\": \"%b\"}", configuration.getOffsetReset(), configuration.isAutoCommit()));
-
-            if (clientResponse.getStatus() != 200) {
-                throw new QueueProxyServiceException(String.format("Unable to create consumer instance. Proxy returned %d", clientResponse.getStatus()));
-            }
+            checkStatus(clientResponse, SC_OK, CREATE);
             return clientResponse.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
         } catch (ClientHandlerException | UniformInterfaceException e) {
-            throw new QueueProxyServiceException("Unable to create consumer instance. Proxy error.", e);
+          throw proxyException(e, CREATE);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -71,12 +91,10 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             }
 
             clientResponse = builder.delete(ClientResponse.class);
-
-            if (clientResponse.getStatus() != 204) {
-                throw new QueueProxyServiceException(String.format("Unable to destroy consumer instance. Proxy returned %d", clientResponse.getStatus()));
-            }
+            checkStatus(clientResponse, SC_NO_CONTENT, DESTROY);
+            updateUnhealthyStatus("Consumer has been destroyed.");
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw new QueueProxyServiceException("Unable to destroy consumer instance. Proxy error.", e);
+          throw proxyException(e, DESTROY);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -103,15 +121,13 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                 builder.header("Host", configuration.getQueue());
             }
             clientResponse = builder.get(ClientResponse.class);
+            checkStatus(clientResponse, SC_OK, CONSUME);
 
-            if (clientResponse.getStatus() != 200) {
-                throw new QueueProxyServiceException(String.format("Unable to consume messages. Proxy returned %d", clientResponse.getStatus()));
-            }
-
-            return clientResponse.getEntity(new GenericType<List<MessageRecord>>() {
-            });
+            List<MessageRecord> messages = clientResponse.getEntity(new GenericType<List<MessageRecord>>() {});
+            updateHealthyStatus(messages.size());
+            return messages;
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw new QueueProxyServiceException("Unable to consume messages. Proxy error.", e);
+          throw proxyException(e, CONSUME);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -136,12 +152,9 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             }
 
             clientResponse = builder.post(ClientResponse.class);
-
-            if (clientResponse.getStatus() != 200) {
-                throw new QueueProxyServiceException(String.format("Unable to commit offsets. Proxy returned %d", clientResponse.getStatus()));
-            }
+            checkStatus(clientResponse, SC_OK, COMMIT);
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw new QueueProxyServiceException("Unable to commit offsets. Proxy error.", e);
+          throw proxyException(e, COMMIT);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -156,5 +169,18 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
 
     private boolean queueIsNotEmpty() {
         return configuration.getQueue() != null && !configuration.getQueue().isEmpty();
+    }
+    
+    private void updateHealthyStatus(int messageCount) {
+      status = String.format(MESSAGES_CONSUMED, messageCount);
+    }
+    
+    private void updateUnhealthyStatus(String msg) {
+      status = msg;
+    }
+    
+    @Override
+    public String getStatus() {
+      return status;
     }
 }

@@ -22,15 +22,21 @@ import java.net.URI;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class MessageQueueProxyServiceImplTest {
-
+  private static final String NO_MSG = String.format(MessageQueueProxyService.MESSAGES_CONSUMED, 0);
+    private static final String ONE_MSG = String.format(MessageQueueProxyService.MESSAGES_CONSUMED, 1);
+    
     private MessageQueueProxyService messageQueueProxyService;
 
     @Mock
@@ -74,6 +80,8 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}");
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo(NO_MSG));
     }
 
     @Test
@@ -107,13 +115,15 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"true\"}");
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo(NO_MSG));
     }
 
     @Test
     public void testCreateConsumerInstanceWhenErrorOccurs() throws Exception {
-
+        final String errorMessage = "Unable to create consumer instance. Proxy returned 500";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to create consumer instance. Proxy returned 500");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester").build())).thenReturn(mockedWebResource);
@@ -122,34 +132,38 @@ public class MessageQueueProxyServiceImplTest {
         final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
-
-        URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
-
-        assertThat(actualConsumerInstanceUri, nullValue());
-        verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedResponse, times(1)).close();
+        
+        try {
+          messageQueueProxyService.createConsumerInstance();
+        } finally {
+          verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+          verify(mockedResponse, times(1)).close();
+          
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
 
     @Test
     public void testCreateConsumerInstanceWhenTimeoutOccurs() throws Exception {
-
+        final String errorMessage = "Unable to create consumer instance. Proxy error.";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to create consumer instance. Proxy error.");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester").build())).thenReturn(mockedWebResource);
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
-        final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.post(eq(ClientResponse.class), anyString())).thenThrow(new ClientHandlerException("test timeout"));
 
-        URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
-
-        assertThat(actualConsumerInstanceUri, nullValue());
-        verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedResponse, times(1)).close();
+        try {
+          messageQueueProxyService.createConsumerInstance();
+        } finally {
+          verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+          
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
 
     @Test
@@ -169,6 +183,8 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).delete(ClientResponse.class);
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo("Consumer has been destroyed."));
     }
 
     @Test
@@ -190,13 +206,16 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(client).resource(expectedOverridenUri);
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo("Consumer has been destroyed."));
     }
 
     @Test
     public void testDestroyConsumerInstanceWhenErrorOccurs() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final String errorMessage = "Unable to destroy consumer instance. Proxy returned 500";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to destroy consumer instance. Proxy returned 500");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(consumerUri)).thenReturn(mockedWebResource);
@@ -206,31 +225,38 @@ public class MessageQueueProxyServiceImplTest {
         when(mockedBuilder.delete(ClientResponse.class)).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
 
-        messageQueueProxyService.destroyConsumerInstance(consumerUri);
-
-        verify(mockedBuilder).delete(ClientResponse.class);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedResponse, times(1)).close();
+        try {
+          messageQueueProxyService.destroyConsumerInstance(consumerUri);
+        } finally {
+          verify(mockedBuilder).delete(ClientResponse.class);
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+          verify(mockedResponse, times(1)).close();
+          
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
 
     @Test
     public void testDestroyConsumerInstanceWhenTimeoutOccurs() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final String errorMessage = "Unable to destroy consumer instance. Proxy error.";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to destroy consumer instance. Proxy error.");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(consumerUri)).thenReturn(mockedWebResource);
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
-        final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.delete(ClientResponse.class)).thenThrow(new ClientHandlerException("test timeout"));
 
-        messageQueueProxyService.destroyConsumerInstance(consumerUri);
-
-        verify(mockedBuilder).delete(ClientResponse.class);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedResponse, times(1)).close();
+        try {
+          messageQueueProxyService.destroyConsumerInstance(consumerUri);
+        } finally {
+          verify(mockedBuilder).delete(ClientResponse.class);
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
 
     @Test
@@ -252,6 +278,8 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo(ONE_MSG));
     }
 
     @Test
@@ -275,13 +303,16 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo(ONE_MSG));
     }
 
     @Test
     public void testConsumeMessagesWhenErrorOccurs() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final String errorMessage = "Unable to consume messages. Proxy returned 500";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to consume messages. Proxy returned 500");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(UriBuilder.fromUri(consumerUri).path("topics").path("CmsPublicationEvent").build())).thenReturn(mockedWebResource);
@@ -291,29 +322,38 @@ public class MessageQueueProxyServiceImplTest {
         when(mockedBuilder.get(ClientResponse.class)).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
 
-        messageQueueProxyService.consumeMessages(consumerUri);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
-        verify(mockedResponse, times(1)).close();
+        try {
+          messageQueueProxyService.consumeMessages(consumerUri);
+        } finally {
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+          verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
+          verify(mockedResponse, times(1)).close();
+          
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
 
     @Test
     public void testConsumeMessagesWhenTimeoutOccurs() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final String errorMessage = "Unable to consume messages. Proxy error.";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to consume messages. Proxy error.");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(UriBuilder.fromUri(consumerUri).path("topics").path("CmsPublicationEvent").build())).thenReturn(mockedWebResource);
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
-        final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.get(ClientResponse.class)).thenThrow(new ClientHandlerException("test timeout"));
 
-        messageQueueProxyService.consumeMessages(consumerUri);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
-        verify(mockedResponse, times(1)).close();
+        try {
+          messageQueueProxyService.consumeMessages(consumerUri);
+        } finally {
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+          verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
+          
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
 
     @Test
@@ -333,6 +373,8 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).post(ClientResponse.class);
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo(NO_MSG));
     }
 
     @Test
@@ -354,13 +396,16 @@ public class MessageQueueProxyServiceImplTest {
         verify(mockedBuilder).header(eq("Host"), eq("kafka"));
         verify(client).resource(expectedOverridenUri);
         verify(mockedResponse, times(1)).close();
+        
+        assertThat(messageQueueProxyService.getStatus(), equalTo(NO_MSG));
     }
 
     @Test
     public void testCommitOffsetsWhenErrorOccurs() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final String errorMessage = "Unable to commit offsets. Proxy returned 500";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to commit offsets. Proxy returned 500");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(UriBuilder.fromUri(consumerUri).path("offsets").build())).thenReturn(mockedWebResource);
@@ -369,32 +414,38 @@ public class MessageQueueProxyServiceImplTest {
         final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.post(ClientResponse.class)).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
-
-        messageQueueProxyService.commitOffsets(consumerUri);
-
-        verify(mockedBuilder).post(ClientResponse.class);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedResponse, times(1)).close();
+        
+        try {
+          messageQueueProxyService.commitOffsets(consumerUri);
+        } finally {
+          verify(mockedBuilder).post(ClientResponse.class);
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+          verify(mockedResponse, times(1)).close();
+          
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
 
     @Test
     public void testCommitOffsetsWhenTimeoutOccurs() throws Exception {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+        final String errorMessage = "Unable to commit offsets. Proxy error.";
         expectedException.expect(QueueProxyServiceException.class);
-        expectedException.expectMessage("Unable to commit offsets. Proxy error.");
+        expectedException.expectMessage(errorMessage);
 
         final WebResource mockedWebResource = mock(WebResource.class);
         when(client.resource(UriBuilder.fromUri(consumerUri).path("offsets").build())).thenReturn(mockedWebResource);
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
-        final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.post(ClientResponse.class)).thenThrow(new ClientHandlerException("test timeout"));
 
-        messageQueueProxyService.commitOffsets(consumerUri);
-
-        verify(mockedBuilder).post(ClientResponse.class);
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedResponse, times(1)).close();
+        try {
+          messageQueueProxyService.commitOffsets(consumerUri);
+        } finally {
+          verify(mockedBuilder).post(ClientResponse.class);
+          verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+          
+          assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
+        }
     }
-
 }
