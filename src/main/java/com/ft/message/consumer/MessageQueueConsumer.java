@@ -46,7 +46,7 @@ public class MessageQueueConsumer {
                 }
             }
             if(Thread.currentThread().isInterrupted()) {
-                throw new InterruptedException();
+              resetConsumer("Consumer thread has been interrupted.", null);
             }
         } catch (QueueProxyServiceException e) {
           resetConsumer("Error while communicating with queue proxy.", e);
@@ -64,9 +64,11 @@ public class MessageQueueConsumer {
       } catch (Throwable t1) {
         msg += "; Error while destroying consumer instance.";
       } finally {
-        LOGGER.error(String.format("outcome=Exception message=\"%s\"", msg), t);
+        if (t != null) {
+          LOGGER.error(String.format("outcome=Exception message=\"%s\"", msg), t);
           consumerInstance = null;
           backOff();
+        }
       }
     }
     

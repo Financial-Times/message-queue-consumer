@@ -75,7 +75,7 @@ public class LoggingTestHelper {
         LoggingEvent actual = null;
         Stream<LoggingEvent> stream = argument.getAllValues().stream()
                 .filter(event -> event.getFormattedMessage().matches(pattern)
-                                  || event.getThrowableProxy().getClassName().matches(pattern));
+                                  || (event.getThrowableProxy() != null && event.getThrowableProxy().getClassName().matches(pattern)));
         
         if (matching) {
           actual = stream.findFirst().get();
