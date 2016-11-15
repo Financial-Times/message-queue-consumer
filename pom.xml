@@ -6,36 +6,22 @@
 
     <groupId>com.ft</groupId>
     <artifactId>message-queue-consumer</artifactId>
-    <version>1.8.1</version>
+    <version>1.8.2</version>
 
     <packaging>jar</packaging>
     <name>Message queue consumer</name>
     <description>Simple consumer library/ template for consuming from topics with a groupId.</description>
+
     <repositories>
         <repository>
-            <id>ft-releases</id>
-            <url>http://anthill.svc.ft.com:8081/nexus/content/groups/public</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
+            <id>central</id>
+            <url>http://repo1.maven.org/maven2</url>
+        </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
-
-    <distributionManagement>
-        <repository>
-            <id>deployment</id>
-            <name>Internal Releases</name>
-            <url>http://anthill.svc.ft.com:8081/nexus/content/repositories/releases/</url>
-        </repository>
-        <snapshotRepository>
-            <id>deployment</id>
-            <name>Internal Releases</name>
-            <url>http://anthill.svc.ft.com:8081/nexus/content/repositories/snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
 
     <dependencies>
         <dependency>
@@ -69,9 +55,9 @@
             <version>3.0.2</version>
         </dependency>
         <dependency>
-            <groupId>com.ft</groupId>
+            <groupId>com.github.Financial-Times</groupId>
             <artifactId>ft-async-message</artifactId>
-            <version>1.0.13</version>
+            <version>1.0.13.1</version>
         </dependency>
         <dependency>
             <groupId>com.sun.jersey</groupId>
@@ -79,14 +65,14 @@
             <version>1.18.1</version>
         </dependency>
         <dependency>
-            <groupId>com.ft</groupId>
-            <artifactId>jaxrs-transaction-id-handling</artifactId>
-            <version>2.2</version>
+            <groupId>com.github.Financial-Times</groupId>
+            <artifactId>jax-rs-transaction-id-handling</artifactId>
+            <version>2.6.1</version>
         </dependency>
         <dependency>
-            <groupId>com.ft</groupId>
+            <groupId>com.github.Financial-Times</groupId>
             <artifactId>advanced-dropwizard-healthcheck</artifactId>
-            <version>3.2.0</version>
+            <version>2.11-dw07</version>
             <exclusions>
                 <exclusion>
                     <groupId>io.dropwizard</groupId>
@@ -117,9 +103,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.ft.dropwizard</groupId>
+            <groupId>com.github.Financial-Times</groupId>
             <artifactId>api-hamcrest-matchers</artifactId>
-            <version>0.7.0</version>
+            <version>0.7.1</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
