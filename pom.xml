@@ -4,9 +4,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ft</groupId>
+    <groupId>com.github.Financial-Times</groupId>
     <artifactId>message-queue-consumer</artifactId>
-    <version>1.8.2</version>
+    <version>1.8.3</version>
 
     <packaging>jar</packaging>
     <name>Message queue consumer</name>
