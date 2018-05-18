@@ -1,0 +1,10 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: coco/dropwizardbase-internal:v1.0.3
+    steps:
+      - checkout
+      - run:
+          name: Maven
+          command: mvn clean verify
