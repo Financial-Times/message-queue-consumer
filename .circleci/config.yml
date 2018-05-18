@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/openjdk:8-jdk-browsers
+      - image: coco/dropwizardbase-internal:v1.0.3
     steps:
       - checkout
       - run:
