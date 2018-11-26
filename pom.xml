@@ -11,29 +11,16 @@
     <packaging>jar</packaging>
     <name>Message queue consumer</name>
     <description>Simple consumer library/ template for consuming from topics with a groupId.</description>
-    <repositories>
-        <repository>
-            <id>ft-releases</id>
-            <url>http://anthill.svc.ft.com:8081/nexus/content/groups/public</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-    </repositories>
-
     <distributionManagement>
         <repository>
-            <id>deployment</id>
+            <id>releases</id>
             <name>Internal Releases</name>
-            <url>http://anthill.svc.ft.com:8081/nexus/content/repositories/releases/</url>
+            <url>https://nexus.in.ft.com/repository/releases</url>
         </repository>
         <snapshotRepository>
-            <id>deployment</id>
-            <name>Internal Releases</name>
-            <url>http://anthill.svc.ft.com:8081/nexus/content/repositories/snapshots/</url>
+            <id>snapshots</id>
+            <uniqueVersion>true</uniqueVersion>
+            <url>https://nexus.in.ft.com/repository/snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
