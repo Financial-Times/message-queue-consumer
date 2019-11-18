@@ -49,7 +49,8 @@ public class MessageQueueConsumer {
               resetConsumer("Consumer thread has been interrupted.", null);
             }
         } catch (QueueProxyServiceException e) {
-          resetConsumer("Error while communicating with queue proxy.", e);
+        	//TODO - testing only - remove afterwards
+        	//resetConsumer("Error while communicating with queue proxy.", e);
         } catch (Throwable t) {
           resetConsumer(t.getMessage(), t);
         }

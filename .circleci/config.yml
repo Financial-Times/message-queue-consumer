@@ -1,10 +1,53 @@
 version: 2
 jobs:
   build:
+    working_directory: ~/resilient-jersey-wrapper
     docker:
-      - image: coco/dropwizardbase-internal:v1.0.3
+      - image: maven
+      - image: java:openjdk-8
     steps:
       - checkout
       - run:
-          name: Maven
-          command: mvn clean verify
+          name: Maven dependency
+          command: |
+            mkdir /root/.m2/
+            curl -v -o /root/.m2/settings.xml "https://raw.githubusercontent.com/Financial-Times/nexus-settings/master/public-settings.xml"
+            mvn dependency:go-offline
+      - run:
+          name: Maven integration Tests
+          command: |
+            curl -v -o /root/.m2/settings.xml "https://raw.githubusercontent.com/Financial-Times/nexus-settings/master/public-settings.xml"
+            mvn clean verify
+            rm -rf /root/.m2/*
+  publish-nexus:
+    working_directory: ~/message-queue-consumer
+    docker:
+      - image: coco/dropwizardbase-internal:v1.0.3
+    steps:
+      - checkout:
+            path: ~/message-queue-consumer
+      - run:
+          name: Publish Tag to Nexus repository
+          command: |
+            mvn versions:set -DnewVersion=${CIRCLE_TAG}
+            mvn versions:commit
+            mvn deploy
+
+workflows:
+  version: 2
+  test-and-build:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - publish-nexus:
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^\d+\.\d+\.\d+(-[a-z0-9-]+)?$/
+     
+          
