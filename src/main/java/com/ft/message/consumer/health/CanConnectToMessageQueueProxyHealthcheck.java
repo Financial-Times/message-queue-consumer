@@ -8,11 +8,15 @@ import com.ft.platform.dropwizard.AdvancedResult;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import io.dropwizard.client.JerseyClientConfiguration;
+import io.dropwizard.setup.Environment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
+
+import static com.ft.message.consumer.QueueProxyClientSingleton.getQueueProxyClientSingleInstance;
 
 public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthCheck {
 
@@ -25,10 +29,28 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     private HealthcheckConfiguration healthcheckConfiguration;
     private Client proxyClient;
 
+    private Environment env;
+    private JerseyClientConfiguration jerseyConfig;
+    private String queueProxyClientName;
+
     public CanConnectToMessageQueueProxyHealthcheck(final Client proxyClient, final MessageQueueConsumerConfiguration configuration,
                                                     final HealthcheckConfiguration healthcheckConfiguration) {
         super(healthcheckConfiguration.getName());
-        this.proxyClient = proxyClient;
+        this.proxyClient = getQueueProxyClientSingleInstance(proxyClient, null, null, null);
+        this.configuration = configuration;
+        this.healthcheckConfiguration = healthcheckConfiguration;
+    }
+
+    public CanConnectToMessageQueueProxyHealthcheck(final Client proxyClient, final MessageQueueConsumerConfiguration configuration,
+                                                    final HealthcheckConfiguration healthcheckConfiguration,
+                                                    Environment env,
+                                                    JerseyClientConfiguration jerseyConfig,
+                                                    String queueProxyClientName) {
+        super(healthcheckConfiguration.getName());
+        this.env = env;
+        this.jerseyConfig = jerseyConfig;
+        this.queueProxyClientName = queueProxyClientName;
+        this.proxyClient = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName);
         this.configuration = configuration;
         this.healthcheckConfiguration = healthcheckConfiguration;
     }
@@ -80,7 +102,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
         }
         URI uri = uriBuilder.build();
 
-        WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+        WebResource.Builder builder = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName).resource(uri).getRequestBuilder();
         if (queueIsNotEmpty()) {
             builder.header("Host", configuration.getQueue());
         }
@@ -88,7 +110,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     }
 
     protected ClientResponse getClientResponseForMessageConsumer(URI readMessageFromUri) {
-        WebResource.Builder builder = proxyClient.resource(readMessageFromUri).getRequestBuilder();
+        WebResource.Builder builder = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName).resource(readMessageFromUri).getRequestBuilder();
         builder.header("Accept", "application/json");
         if (queueIsNotEmpty()) {
             builder.header("Host", configuration.getQueue());
@@ -97,7 +119,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     }
 
     protected ClientResponse getClientResponseForProxyConnection(URI uri) {
-        WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+        WebResource.Builder builder = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName).resource(uri).getRequestBuilder();
         builder.header("Content-Type", "application/json");
         if (queueIsNotEmpty()) {
             builder.header("Host", configuration.getQueue());

@@ -1,5 +1,6 @@
 package com.ft.message.consumer.proxy;
 
+import com.ft.message.consumer.QueueProxyClientSingleton;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
 import com.ft.message.consumer.proxy.model.MessageRecord;
@@ -9,10 +10,14 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
+import io.dropwizard.client.JerseyClientConfiguration;
+import io.dropwizard.setup.Environment;
 
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.List;
+
+import static com.ft.message.consumer.QueueProxyClientSingleton.*;
 
 public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     private static final String PROXY_ERR = "Unable to %s. Proxy error.";
@@ -28,10 +33,25 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     private MessageQueueConsumerConfiguration configuration;
     private Client proxyClient;
     private String status = String.format(MESSAGES_CONSUMED, 0);
+
+    private Environment env;
+    private JerseyClientConfiguration jerseyConfig;
+    private String queueProxyClientName;
     
     public MessageQueueProxyServiceImpl(MessageQueueConsumerConfiguration configuration, Client proxyClient) {
         this.configuration = configuration;
-        this.proxyClient = proxyClient;
+        this.proxyClient = getQueueProxyClientSingleInstance(proxyClient, null, null, null);
+    }
+
+    public MessageQueueProxyServiceImpl(MessageQueueConsumerConfiguration configuration, Client proxyClient,
+                                        Environment env,
+                                        JerseyClientConfiguration jerseyConfig,
+                                        String queueProxyClientName) {
+        this.env = env;
+        this.jerseyConfig = jerseyConfig;
+        this.queueProxyClientName = queueProxyClientName;
+        this.configuration = configuration;
+        this.proxyClient = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName);
     }
 
     private void checkStatus(ClientResponse response, int expectedStatus, String action) {
@@ -57,7 +77,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                     .path(configuration.getGroupName())
                     .build();
 
-            WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            WebResource.Builder builder = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName).resource(uri).getRequestBuilder();
             builder.header("Content-Type", "application/json");
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
@@ -85,7 +105,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             }
             URI uri = uriBuilder.build();
 
-            WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            WebResource.Builder builder = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName).resource(uri).getRequestBuilder();
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
@@ -93,6 +113,9 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             clientResponse = builder.delete(ClientResponse.class);
             checkStatus(clientResponse, SC_NO_CONTENT, DESTROY);
             updateUnhealthyStatus("Consumer has been destroyed.");
+            //
+            proxyClient.destroy();
+            proxyClient = null;
         } catch (ClientHandlerException | UniformInterfaceException e) {
           throw proxyException(e, DESTROY);
         } finally {
@@ -115,7 +138,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
 
             URI uri = uriBuilder.build();
 
-            WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            WebResource.Builder builder = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName).resource(uri).getRequestBuilder();
             builder.header("Accept", "application/json");
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
@@ -146,7 +169,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             }
             URI uri = uriBuilder.build();
 
-            WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            WebResource.Builder builder = getQueueProxyClientSingleInstance(proxyClient, env, jerseyConfig, queueProxyClientName).resource(uri).getRequestBuilder();
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }

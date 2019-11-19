@@ -8,7 +8,9 @@ import com.ft.message.consumer.proxy.MessageQueueProxyService;
 import com.ft.message.consumer.proxy.MessageQueueProxyServiceImpl;
 import com.ft.platform.dropwizard.AdvancedHealthCheck;
 import com.sun.jersey.api.client.Client;
+import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.lifecycle.Managed;
+import io.dropwizard.setup.Environment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,13 +18,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static com.ft.message.consumer.QueueProxyClientSingleton.*;
+
 public class MessageQueueConsumerInitializer implements Managed {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageQueueConsumerInitializer.class);
 
     private final MessageQueueConsumerConfiguration messageQueueConsumerConfiguration;
     private final MessageListener messageListener;
-    private final Client queueProxyClient;
+    private Client queueProxyClient;
+    private Environment env;
+    private JerseyClientConfiguration jerseyConfig;
+    private String queueProxyClientName;
     private final MessageQueueProxyService messageQueueProxyService;
     final ExecutorService startupExecutor;
     
@@ -30,7 +37,9 @@ public class MessageQueueConsumerInitializer implements Managed {
                                            MessageListener listener,
                                            Client queueProxyClient) {
       
-        this(consumerConfiguration, listener, queueProxyClient, null);
+        this(consumerConfiguration, listener,
+                getQueueProxyClientSingleInstance(queueProxyClient, null, null, null),
+                null);
     }
 
     public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
@@ -38,13 +47,33 @@ public class MessageQueueConsumerInitializer implements Managed {
                                            Client queueProxyClient,
                                            ExecutorService executorService) {
       
-        this.queueProxyClient = queueProxyClient;
+        this.queueProxyClient = getQueueProxyClientSingleInstance(queueProxyClient, env, jerseyConfig, queueProxyClientName);
         this.messageQueueConsumerConfiguration = consumerConfiguration;
         this.messageListener = listener;
         this.startupExecutor = executorService != null ?
             executorService : Executors.newFixedThreadPool(consumerConfiguration.getStreamCount());
         this.messageQueueProxyService =
             new MessageQueueProxyServiceImpl(messageQueueConsumerConfiguration, queueProxyClient);
+    }
+
+    public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
+                                           MessageListener listener,
+                                           Client queueProxyClient,
+                                           ExecutorService executorService,
+                                           Environment env,
+                                           JerseyClientConfiguration jerseyConfig,
+                                           String queueProxyClientName) {
+
+        this.env = env;
+        this.jerseyConfig = jerseyConfig;
+        this.queueProxyClientName = queueProxyClientName;
+        this.queueProxyClient = getQueueProxyClientSingleInstance(queueProxyClient, env, jerseyConfig, queueProxyClientName);
+        this.messageQueueConsumerConfiguration = consumerConfiguration;
+        this.messageListener = listener;
+        this.startupExecutor = executorService != null ?
+                executorService : Executors.newFixedThreadPool(consumerConfiguration.getStreamCount());
+        this.messageQueueProxyService =
+                new MessageQueueProxyServiceImpl(messageQueueConsumerConfiguration, this.queueProxyClient, env, jerseyConfig, queueProxyClientName);
     }
 
     @Override

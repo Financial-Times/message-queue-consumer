@@ -45,6 +45,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>io.dropwizard</groupId>
+      <artifactId>dropwizard-client</artifactId>
+      <version>0.7.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.codahale.metrics</groupId>
       <artifactId>metrics-core</artifactId>
       <version>3.0.2</version>
@@ -63,6 +68,11 @@
       <groupId>com.ft</groupId>
       <artifactId>jaxrs-transaction-id-handling</artifactId>
       <version>2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.Financial-Times</groupId>
+      <artifactId>resilient-jersey-wrapper</artifactId>
+      <version>0.4.0</version>
     </dependency>
     <dependency>
       <groupId>com.ft</groupId>
