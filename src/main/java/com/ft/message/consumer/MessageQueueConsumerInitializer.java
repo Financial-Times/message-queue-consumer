@@ -45,9 +45,21 @@ public class MessageQueueConsumerInitializer implements Managed {
     public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
                                            MessageListener listener,
                                            Client queueProxyClient,
+                                           Environment env,
+                                           JerseyClientConfiguration jerseyConfig,
+                                           String queueProxyClientName) {
+
+        this(consumerConfiguration, listener,
+                getQueueProxyClientSingleInstance(getQueueProxyClientSingleInstance(queueProxyClient, env, jerseyConfig, queueProxyClientName),
+                        env, jerseyConfig, queueProxyClientName), null);
+    }
+
+    public MessageQueueConsumerInitializer(MessageQueueConsumerConfiguration consumerConfiguration,
+                                           MessageListener listener,
+                                           Client queueProxyClient,
                                            ExecutorService executorService) {
       
-        this.queueProxyClient = getQueueProxyClientSingleInstance(queueProxyClient, env, jerseyConfig, queueProxyClientName);
+        this.queueProxyClient = getQueueProxyClientSingleInstance(queueProxyClient, null, null, null);
         this.messageQueueConsumerConfiguration = consumerConfiguration;
         this.messageListener = listener;
         this.startupExecutor = executorService != null ?
