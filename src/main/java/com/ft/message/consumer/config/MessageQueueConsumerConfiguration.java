@@ -1,6 +1,7 @@
 package com.ft.message.consumer.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
 
 public class MessageQueueConsumerConfiguration {
 
@@ -28,7 +29,8 @@ public class MessageQueueConsumerConfiguration {
         this.autoCommit = autoCommit;
         this.backoffPeriod = backoffPeriod == 0? 8000 : backoffPeriod;
         this.streamCount = streamCount == 0? 1 : streamCount;
-        this.offsetReset = offsetReset == null? "largest" : offsetReset;
+        // Any value of offsetReset other than "latest", "earliest" or "none" causes a Kafka consumer exception
+        this.offsetReset = Strings.isNullOrEmpty(offsetReset) ? "latest" : offsetReset;
     }
 
     public String getTopicName() {
