@@ -21,7 +21,8 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     private static final String CONSUME = "consume messages";
     private static final String COMMIT = "commit offsets";
     private static final String DESTROY = "destroy consumer instance";
-    
+    private static final String KAFKA_PROXY_V2 = "application/vnd.kafka.v2+json";
+
     private static final int SC_NO_CONTENT = ClientResponse.Status.NO_CONTENT.getStatusCode();
     private static final int SC_OK = ClientResponse.Status.OK.getStatusCode();
     
@@ -58,7 +59,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                     .build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            builder.header("Content-Type", "application/json");
+            builder.header("Content-Type", KAFKA_PROXY_V2);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
@@ -86,6 +87,62 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            builder.header("Accept", KAFKA_PROXY_V2);
+            if (queueIsNotEmpty()) {
+                builder.header("Host", configuration.getQueue());
+            }
+
+            clientResponse = builder.delete(ClientResponse.class);
+            checkStatus(clientResponse, SC_NO_CONTENT, DESTROY);
+            updateUnhealthyStatus("Consumer has been destroyed.");
+        } catch (ClientHandlerException | UniformInterfaceException e) {
+          throw proxyException(e, DESTROY);
+        } finally {
+            if (clientResponse != null) {
+                clientResponse.close();
+            }
+        }
+    }
+
+    @Override
+    public void subscribeConsumerInstanceToTopic(URI consumerInstance) {
+        ClientResponse clientResponse = null;
+        try {
+            URI uri = UriBuilder.fromUri(consumerInstance)
+                    .path("subscription")
+                    .build();
+
+            WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            builder.header("Content-Type", KAFKA_PROXY_V2);
+            if (queueIsNotEmpty()) {
+                builder.header("Host", configuration.getQueue());
+            }
+            clientResponse = builder.post(ClientResponse.class, String.format("{\"topics\":[\"%s\"]}", configuration.getTopicName()));
+            checkStatus(clientResponse, SC_NO_CONTENT, CREATE);
+        } catch (ClientHandlerException | UniformInterfaceException e) {
+          throw proxyException(e, CREATE);
+        } finally {
+            if (clientResponse != null) {
+                clientResponse.close();
+            }
+        }
+    }
+
+
+    @Override
+    public void destroyConsumerInstanceSubscription(URI consumerInstance) {
+        ClientResponse clientResponse = null;
+        try {
+
+            UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance)
+                    .path("subscription");
+            if (queueIsNotEmpty()) {
+                addProxyPortAndHostInUri(uriBuilder);
+            }
+            URI uri = uriBuilder.build();
+
+            WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
+            builder.header("Accept", KAFKA_PROXY_V2);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
@@ -106,8 +163,8 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     public List<MessageRecord> consumeMessages(URI consumerInstance) {
         ClientResponse clientResponse = null;
         try {
-            UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance).path("topics")
-                    .path(configuration.getTopicName());
+            UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance)
+                    .path("records");
 
             if (queueIsNotEmpty()) {
                 addProxyPortAndHostInUri(uriBuilder);
@@ -116,7 +173,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            builder.header("Accept", "application/json");
+            builder.header("Accept", KAFKA_PROXY_V2);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
