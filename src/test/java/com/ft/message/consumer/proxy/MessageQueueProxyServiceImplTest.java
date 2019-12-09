@@ -1,7 +1,7 @@
 package com.ft.message.consumer.proxy;
 
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
-import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
+import com.ft.message.consumer.proxy.model.ConsumerInstanceResponse;
 import com.ft.message.consumer.proxy.model.MessageRecord;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.Client;
@@ -71,7 +71,7 @@ public class MessageQueueProxyServiceImplTest {
         final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"earliest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(200);
-        when(mockedResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(new CreateConsumerInstanceResponse(expectedUri));
+        when(mockedResponse.getEntity(ConsumerInstanceResponse.class)).thenReturn(new ConsumerInstanceResponse(expectedUri));
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
 
@@ -135,7 +135,7 @@ public class MessageQueueProxyServiceImplTest {
         final ClientResponse mockedResponse = mock(ClientResponse.class);
         when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"earliest\", \"auto.commit.enable\": \"true\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(200);
-        when(mockedResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(new CreateConsumerInstanceResponse(expectedUri));
+        when(mockedResponse.getEntity(ConsumerInstanceResponse.class)).thenReturn(new ConsumerInstanceResponse(expectedUri));
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
 

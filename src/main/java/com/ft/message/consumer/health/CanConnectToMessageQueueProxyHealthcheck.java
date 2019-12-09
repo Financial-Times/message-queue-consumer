@@ -2,7 +2,7 @@ package com.ft.message.consumer.health;
 
 import com.ft.message.consumer.config.HealthcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
-import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
+import com.ft.message.consumer.proxy.model.ConsumerInstanceResponse;
 import com.ft.platform.dropwizard.AdvancedHealthCheck;
 import com.ft.platform.dropwizard.AdvancedResult;
 import com.google.common.base.Strings;
@@ -47,7 +47,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
                 return reportUnhealthy(String.format("Unable to connect to queue proxy. %d", clientResponseToCreateConsumer.getStatus()));
             }
 
-            URI consumerInstance = clientResponseToCreateConsumer.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
+            URI consumerInstance = clientResponseToCreateConsumer.getEntity(ConsumerInstanceResponse.class).getBaseUri();
             URI messageReaderUri = buildMessageReaderUri(consumerInstance);
             clientResponseToCheckTopic = getClientResponseForMessageConsumer(messageReaderUri);
             if (clientResponseToCheckTopic.getStatus() != HTTP_RESPONSE_OK) {

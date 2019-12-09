@@ -1,7 +1,7 @@
 package com.ft.message.consumer.proxy;
 
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
-import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
+import com.ft.message.consumer.proxy.model.ConsumerInstanceResponse;
 import com.ft.message.consumer.proxy.model.MessageRecord;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -65,7 +65,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             }
             clientResponse = builder.post(ClientResponse.class, String.format("{\"auto.offset.reset\": \"%s\", \"auto.commit.enable\": \"%b\"}", configuration.getOffsetReset(), configuration.isAutoCommit()));
             checkStatus(clientResponse, SC_OK, CREATE);
-            return clientResponse.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
+            return clientResponse.getEntity(ConsumerInstanceResponse.class).getBaseUri();
         } catch (ClientHandlerException | UniformInterfaceException e) {
           throw proxyException(e, CREATE);
         } finally {
