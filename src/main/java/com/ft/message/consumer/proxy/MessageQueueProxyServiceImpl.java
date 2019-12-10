@@ -21,7 +21,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     private static final String CONSUME = "consume messages";
     private static final String COMMIT = "commit offsets";
     private static final String DESTROY = "destroy consumer instance";
-    private static final String KAFKA_PROXY_V2 = "application/vnd.kafka.v2+json";
+    private static final String KAFKA_MESSAGE_CONTENT_TYPE = "application/vnd.kafka.v2+json";
 
     private static final int SC_NO_CONTENT = ClientResponse.Status.NO_CONTENT.getStatusCode();
     private static final int SC_OK = ClientResponse.Status.OK.getStatusCode();
@@ -59,7 +59,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                     .build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            builder.header("Content-Type", KAFKA_PROXY_V2);
+            builder.header("Content-Type", KAFKA_MESSAGE_CONTENT_TYPE);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
@@ -87,7 +87,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            builder.header("Accept", KAFKA_PROXY_V2);
+            builder.header("Accept", KAFKA_MESSAGE_CONTENT_TYPE);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
@@ -113,7 +113,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
                     .build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            builder.header("Content-Type", KAFKA_PROXY_V2);
+            builder.header("Content-Type", KAFKA_MESSAGE_CONTENT_TYPE);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
@@ -142,7 +142,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            builder.header("Accept", KAFKA_PROXY_V2);
+            builder.header("Accept", KAFKA_MESSAGE_CONTENT_TYPE);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }
@@ -173,7 +173,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            builder.header("Accept", KAFKA_PROXY_V2);
+            builder.header("Accept", KAFKA_MESSAGE_CONTENT_TYPE);
             if (queueIsNotEmpty()) {
                 builder.header("Host", configuration.getQueue());
             }

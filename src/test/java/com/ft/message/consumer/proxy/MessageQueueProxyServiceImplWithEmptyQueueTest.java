@@ -31,6 +31,7 @@ import static org.mockito.Mockito.*;
 public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
     private MessageQueueProxyService messageQueueProxyService;
+    private static final String KAFKA_MESSAGE_CONTENT_TYPE = "application/vnd.kafka.v2+json";
 
     @Mock
     private Client client;
@@ -69,7 +70,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
         assertThat(actualConsumerInstanceUri, is(equalTo(expectedUri)));
 
-        verify(mockedBuilder).header(eq("Content-Type"), eq("application/vnd.kafka.v2+json"));
+        verify(mockedBuilder).header(eq("Content-Type"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"earliest\", \"auto.commit.enable\": \"false\"}");
         verify(mockedResponse, times(1)).close();
@@ -92,7 +93,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
 
         assertThat(actualConsumerInstanceUri, nullValue());
-        verify(mockedBuilder).header(eq("Content-Type"), eq("application/vnd.kafka.v2+json"));
+        verify(mockedBuilder).header(eq("Content-Type"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedResponse, times(1)).close();
     }
@@ -154,7 +155,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
         assertThat(actualMessageRecords.get(0).getValue(), is(equalTo("myrecord".getBytes())));
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).header(eq("Accept"), eq("application/vnd.kafka.v2+json"));
+        verify(mockedBuilder).header(eq("Accept"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedResponse, times(1)).close();
     }
 
@@ -174,7 +175,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
         messageQueueProxyService.consumeMessages(consumerUri);
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).header(eq("Accept"), eq("application/vnd.kafka.v2+json"));
+        verify(mockedBuilder).header(eq("Accept"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedResponse, times(1)).close();
     }
 
