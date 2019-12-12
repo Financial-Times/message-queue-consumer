@@ -3,6 +3,7 @@ package com.ft.message.consumer.proxy;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
 import com.ft.message.consumer.proxy.model.ConsumerInstanceResponse;
 import com.ft.message.consumer.proxy.model.MessageRecord;
+import com.google.common.base.Strings;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
@@ -25,49 +26,50 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
 
     private static final int SC_NO_CONTENT = ClientResponse.Status.NO_CONTENT.getStatusCode();
     private static final int SC_OK = ClientResponse.Status.OK.getStatusCode();
-    
+
     private MessageQueueConsumerConfiguration configuration;
     private Client proxyClient;
     private String status = String.format(MESSAGES_CONSUMED, 0);
-    
+
     public MessageQueueProxyServiceImpl(MessageQueueConsumerConfiguration configuration, Client proxyClient) {
         this.configuration = configuration;
         this.proxyClient = proxyClient;
     }
 
     private void checkStatus(ClientResponse response, int expectedStatus, String action) {
-      if (response.getStatus() != expectedStatus) {
-        String msg = String.format(PROXY_STATUS_ERR, action, response.getStatus());
-        updateUnhealthyStatus(msg);
-        throw new QueueProxyServiceException(msg);
-      }
+        if (response.getStatus() != expectedStatus) {
+            String msg = String.format(PROXY_STATUS_ERR, action, response.getStatus());
+            updateUnhealthyStatus(msg);
+            throw new QueueProxyServiceException(msg);
+        }
     }
-    
+
     private QueueProxyServiceException proxyException(Throwable e, String action) {
-      String msg = String.format(PROXY_ERR, action);
-      updateUnhealthyStatus(msg);
-      return new QueueProxyServiceException(msg, e);
+        String msg = String.format(PROXY_ERR, action);
+        updateUnhealthyStatus(msg);
+        return new QueueProxyServiceException(msg, e);
     }
-    
+
     @Override
     public URI createConsumerInstance() {
         ClientResponse clientResponse = null;
         try {
             URI uri = UriBuilder.fromUri(configuration.getQueueProxyHost())
                     .path("consumers")
-                    .path(configuration.getGroupName())
-                    .build();
+                    .path(configuration.getGroupName()).build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             builder.header("Content-Type", KAFKA_MESSAGE_CONTENT_TYPE);
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 builder.header("Host", configuration.getQueue());
             }
+
             clientResponse = builder.post(ClientResponse.class, String.format("{\"auto.offset.reset\": \"%s\", \"auto.commit.enable\": \"%b\"}", configuration.getOffsetReset(), configuration.isAutoCommit()));
             checkStatus(clientResponse, SC_OK, CREATE);
-            return clientResponse.getEntity(ConsumerInstanceResponse.class).getBaseUri();
+            uri = clientResponse.getEntity(ConsumerInstanceResponse.class).getBaseUri();
+            return uri;
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw proxyException(e, CREATE);
+            throw proxyException(e, CREATE);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -81,14 +83,14 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
         try {
 
             UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance);
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 addProxyPortAndHostInUri(uriBuilder);
             }
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             builder.header("Accept", KAFKA_MESSAGE_CONTENT_TYPE);
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 builder.header("Host", configuration.getQueue());
             }
 
@@ -96,7 +98,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             checkStatus(clientResponse, SC_NO_CONTENT, DESTROY);
             updateUnhealthyStatus("Consumer has been destroyed.");
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw proxyException(e, DESTROY);
+            throw proxyException(e, DESTROY);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -108,19 +110,22 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     public void subscribeConsumerInstanceToTopic(URI consumerInstance) {
         ClientResponse clientResponse = null;
         try {
-            URI uri = UriBuilder.fromUri(consumerInstance)
-                    .path("subscription")
-                    .build();
+            UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance)
+                    .path("subscription");
+            URI uri = uriBuilder.build();
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
+                addProxyPortAndHostInUri(uriBuilder);
+            }
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             builder.header("Content-Type", KAFKA_MESSAGE_CONTENT_TYPE);
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 builder.header("Host", configuration.getQueue());
             }
             clientResponse = builder.post(ClientResponse.class, String.format("{\"topics\":[\"%s\"]}", configuration.getTopicName()));
             checkStatus(clientResponse, SC_NO_CONTENT, CREATE);
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw proxyException(e, CREATE);
+            throw proxyException(e, CREATE);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -136,14 +141,14 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
 
             UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance)
                     .path("subscription");
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 addProxyPortAndHostInUri(uriBuilder);
             }
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             builder.header("Accept", KAFKA_MESSAGE_CONTENT_TYPE);
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 builder.header("Host", configuration.getQueue());
             }
 
@@ -151,7 +156,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             checkStatus(clientResponse, SC_NO_CONTENT, DESTROY);
             updateUnhealthyStatus("Consumer has been destroyed.");
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw proxyException(e, DESTROY);
+            throw proxyException(e, DESTROY);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -166,7 +171,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance)
                     .path("records");
 
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 addProxyPortAndHostInUri(uriBuilder);
             }
 
@@ -174,7 +179,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             builder.header("Accept", KAFKA_MESSAGE_CONTENT_TYPE);
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 builder.header("Host", configuration.getQueue());
             }
             clientResponse = builder.get(ClientResponse.class);
@@ -184,7 +189,7 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
             updateHealthyStatus(messages.size());
             return messages;
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw proxyException(e, CONSUME);
+            throw proxyException(e, CONSUME);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -198,20 +203,20 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
         try {
 
             UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance).path("offsets");
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 addProxyPortAndHostInUri(uriBuilder);
             }
             URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-            if (queueIsNotEmpty()) {
+            if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 builder.header("Host", configuration.getQueue());
             }
 
             clientResponse = builder.post(ClientResponse.class);
             checkStatus(clientResponse, SC_OK, COMMIT);
         } catch (ClientHandlerException | UniformInterfaceException e) {
-          throw proxyException(e, COMMIT);
+            throw proxyException(e, COMMIT);
         } finally {
             if (clientResponse != null) {
                 clientResponse.close();
@@ -227,17 +232,17 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
     private boolean queueIsNotEmpty() {
         return configuration.getQueue() != null && !configuration.getQueue().isEmpty();
     }
-    
+
     private void updateHealthyStatus(int messageCount) {
-      status = String.format(MESSAGES_CONSUMED, messageCount);
+        status = String.format(MESSAGES_CONSUMED, messageCount);
     }
-    
+
     private void updateUnhealthyStatus(String msg) {
-      status = msg;
+        status = msg;
     }
-    
+
     @Override
     public String getStatus() {
-      return status;
+        return status;
     }
 }

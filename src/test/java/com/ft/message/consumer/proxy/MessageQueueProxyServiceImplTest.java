@@ -86,35 +86,6 @@ public class MessageQueueProxyServiceImplTest {
     }
 
     @Test
-    public void testBuildURL() throws Exception {
-
-        final URI responseUri = UriBuilder.fromUri("http://localhost:8080/consumers/binaryIngester/instances/rest-consumer-1-1").build();
-        final URI expectedUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
-
-        final WebResource mockedWebResource = mock(WebResource.class);
-        when(client.resource(UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester").build())).thenReturn(mockedWebResource);
-        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
-        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
-
-        final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
-        when(mockedResponse.getStatus()).thenReturn(200);
-        when(mockedResponse.getEntity(ConsumerInstanceResponse.class)).thenReturn(new ConsumerInstanceResponse(responseUri));
-
-        URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
-
-        assertThat(actualConsumerInstanceUri, is(equalTo(expectedUri)));
-
-        verify(mockedBuilder).header(eq("Content-Type"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
-        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}");
-        verify(mockedResponse, times(1)).close();
-
-        assertThat(messageQueueProxyService.getStatus(), equalTo(NO_MSG));
-    }
-
-
-    @Test
     public void testCreateConsumerInstanceWithAutocommit() throws Exception {
         MessageQueueProxyService messageQueueProxyService = new MessageQueueProxyServiceImpl(
                 new MessageQueueConsumerConfiguration(
