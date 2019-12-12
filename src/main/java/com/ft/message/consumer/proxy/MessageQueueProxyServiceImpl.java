@@ -112,10 +112,10 @@ public class MessageQueueProxyServiceImpl implements MessageQueueProxyService {
         try {
             UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance)
                     .path("subscription");
-            URI uri = uriBuilder.build();
             if (!Strings.isNullOrEmpty(configuration.getQueue())) {
                 addProxyPortAndHostInUri(uriBuilder);
             }
+            URI uri = uriBuilder.build();
 
             WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
             builder.header("Content-Type", KAFKA_MESSAGE_CONTENT_TYPE);

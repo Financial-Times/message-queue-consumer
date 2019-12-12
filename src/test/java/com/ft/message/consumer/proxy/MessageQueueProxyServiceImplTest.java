@@ -39,6 +39,7 @@ public class MessageQueueProxyServiceImplTest {
     private static final String KAFKA_MESSAGE_CONTENT_TYPE = "application/vnd.kafka.v2+json";
     
     private MessageQueueProxyService messageQueueProxyService;
+    private MessageQueueConsumerConfiguration configuration;
 
     @Mock
     private Client client;
@@ -48,14 +49,13 @@ public class MessageQueueProxyServiceImplTest {
 
     @Before
     public void setUp() throws Exception {
-        messageQueueProxyService = new MessageQueueProxyServiceImpl(
-                new MessageQueueConsumerConfiguration(
-                        "CmsPublicationEvent",
-                        "binaryIngester",
-                        "http://localhost:8082",
-                        "kafka",
-                        8000, 1, "earliest", false),
-                client);
+        configuration = new MessageQueueConsumerConfiguration(
+                "CmsPublicationEvent",
+                "binaryIngester",
+                "http://localhost:8082",
+                "kafka",
+                8000, 1, "earliest", false);
+        messageQueueProxyService = new MessageQueueProxyServiceImpl(configuration, client);
     }
 
     @Test
@@ -258,6 +258,51 @@ public class MessageQueueProxyServiceImplTest {
         
           assertThat(messageQueueProxyService.getStatus(), equalTo(errorMessage));
         }
+    }
+
+    @Test
+    public void testSubscribeConsumerInstanceToTopic() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("subscription").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.post(ClientResponse.class, String.format("{\"topics\":[\"%s\"]}", configuration.getTopicName()))).thenReturn(mockedResponse);
+        when(mockedResponse.getStatus()).thenReturn(204);
+        when(mockedResponse.getEntity(ConsumerInstanceResponse.class)).thenReturn(new ConsumerInstanceResponse(consumerUri));
+
+        messageQueueProxyService.subscribeConsumerInstanceToTopic(consumerUri);
+
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedBuilder).header(eq("Content-Type"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
+        verify(mockedBuilder).post(ClientResponse.class, String.format("{\"topics\":[\"%s\"]}", configuration.getTopicName()));
+        verify(mockedResponse, times(1)).close();
+
+        assertThat(messageQueueProxyService.getStatus(), equalTo(NO_MSG));
+    }
+
+    @Test
+    public void testDestroyConsumerInstanceSubscription() throws Exception {
+        final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
+
+        final WebResource mockedWebResource = mock(WebResource.class);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("subscription").build())).thenReturn(mockedWebResource);
+        final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
+        when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
+        final ClientResponse mockedResponse = mock(ClientResponse.class);
+        when(mockedBuilder.delete(ClientResponse.class)).thenReturn(mockedResponse);
+        when(mockedResponse.getStatus()).thenReturn(204);
+
+        messageQueueProxyService.destroyConsumerInstanceSubscription(consumerUri);
+
+        verify(mockedBuilder).delete(ClientResponse.class);
+        verify(mockedBuilder).header(eq("Host"), eq("kafka"));
+        verify(mockedResponse, times(1)).close();
+
+        assertThat(messageQueueProxyService.getStatus(), equalTo("Consumer has been destroyed."));
     }
 
     @Test
