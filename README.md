@@ -1,8 +1,9 @@
 # message-queue-consumer
 
-Library which does polling to consume messages from a message queue via an http proxy. Supports group and topic semantics.
+A library that is an intermediary to Confluent Kafka REST Proxy. It implements v2 of the API: <https://docs.confluent.io/current/kafka-rest/api.html#api-v2>.
 
-## Configuration
+It supports the following settings:
+
 
 ```
 topicName - name of the topic from which to consume messages
