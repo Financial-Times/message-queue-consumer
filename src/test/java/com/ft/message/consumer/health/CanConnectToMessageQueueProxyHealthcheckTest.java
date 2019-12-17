@@ -2,7 +2,7 @@ package com.ft.message.consumer.health;
 
 import com.ft.message.consumer.config.HealthcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
-import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
+import com.ft.message.consumer.proxy.model.ConsumerInstanceResponse;
 import com.ft.platform.dropwizard.AdvancedResult;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -47,7 +47,7 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
     @Before
     public void setUp() {
         healtcheckConfiguration = new HealthcheckConfiguration("kafka-proxy", 2, "business impact text", "tech summary", "panic guide url");
-        MessageQueueConsumerConfiguration consumerConfiguration = new MessageQueueConsumerConfiguration(topicName, groupName, proxyHost, "kafka", 8000, 1, "smallest", false);
+        MessageQueueConsumerConfiguration consumerConfiguration = new MessageQueueConsumerConfiguration(topicName, groupName, proxyHost, "kafka", 8000, 1, "earliest", false);
         healthcheck = new CanConnectToMessageQueueProxyHealthcheck(mockClient, consumerConfiguration, healtcheckConfiguration);
     }
 
@@ -125,8 +125,8 @@ public class CanConnectToMessageQueueProxyHealthcheckTest {
         doNothing().when(mockClientResponse).close();
 
         if (statusCode == HTTP_RESPONSE_OK) {
-            CreateConsumerInstanceResponse response = mock(CreateConsumerInstanceResponse.class);
-            when(mockClientResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(response);
+            ConsumerInstanceResponse response = mock(ConsumerInstanceResponse.class);
+            when(mockClientResponse.getEntity(ConsumerInstanceResponse.class)).thenReturn(response);
             doReturn(new URI("uri")).when(response).getBaseUri();
         }
 

@@ -1,7 +1,7 @@
 package com.ft.message.consumer.proxy;
 
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
-import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
+import com.ft.message.consumer.proxy.model.ConsumerInstanceResponse;
 import com.ft.message.consumer.proxy.model.MessageRecord;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.Client;
@@ -31,6 +31,7 @@ import static org.mockito.Mockito.*;
 public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
     private MessageQueueProxyService messageQueueProxyService;
+    private static final String KAFKA_MESSAGE_CONTENT_TYPE = "application/vnd.kafka.v2+json";
 
     @Mock
     private Client client;
@@ -46,7 +47,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
                         "binaryIngester",
                         "http://localhost:8082",
                         "",
-                        8000, 1, "smallest", false),
+                        8000, 1, "earliest", false),
                 client);
     }
 
@@ -61,17 +62,17 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
 
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
+        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"earliest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(200);
-        when(mockedResponse.getEntity(CreateConsumerInstanceResponse.class)).thenReturn(new CreateConsumerInstanceResponse(expectedUri));
+        when(mockedResponse.getEntity(ConsumerInstanceResponse.class)).thenReturn(new ConsumerInstanceResponse(expectedUri));
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
 
         assertThat(actualConsumerInstanceUri, is(equalTo(expectedUri)));
 
-        verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
+        verify(mockedBuilder).header(eq("Content-Type"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}");
+        verify(mockedBuilder).post(ClientResponse.class, "{\"auto.offset.reset\": \"earliest\", \"auto.commit.enable\": \"false\"}");
         verify(mockedResponse, times(1)).close();
     }
 
@@ -86,13 +87,13 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
         final ClientResponse mockedResponse = mock(ClientResponse.class);
-        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"smallest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
+        when(mockedBuilder.post(ClientResponse.class, "{\"auto.offset.reset\": \"earliest\", \"auto.commit.enable\": \"false\"}")).thenReturn(mockedResponse);
         when(mockedResponse.getStatus()).thenReturn(500);
 
         URI actualConsumerInstanceUri = messageQueueProxyService.createConsumerInstance();
 
         assertThat(actualConsumerInstanceUri, nullValue());
-        verify(mockedBuilder).header(eq("Content-Type"), eq("application/json"));
+        verify(mockedBuilder).header(eq("Content-Type"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
         verify(mockedResponse, times(1)).close();
     }
@@ -142,7 +143,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
         final URI consumerUri = UriBuilder.fromUri("http://localhost:8082/consumers/binaryIngester/instances/rest-consumer-1-1").build();
 
         final WebResource mockedWebResource = mock(WebResource.class);
-        when(client.resource(UriBuilder.fromUri(consumerUri).path("topics").path("CmsPublicationEvent").build())).thenReturn(mockedWebResource);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("records").build())).thenReturn(mockedWebResource);
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
         final ClientResponse mockedResponse = mock(ClientResponse.class);
@@ -154,7 +155,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
         assertThat(actualMessageRecords.get(0).getValue(), is(equalTo("myrecord".getBytes())));
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
+        verify(mockedBuilder).header(eq("Accept"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedResponse, times(1)).close();
     }
 
@@ -165,7 +166,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
         expectedException.expectMessage("Unable to consume messages. Proxy returned 500");
 
         final WebResource mockedWebResource = mock(WebResource.class);
-        when(client.resource(UriBuilder.fromUri(consumerUri).path("topics").path("CmsPublicationEvent").build())).thenReturn(mockedWebResource);
+        when(client.resource(UriBuilder.fromUri(consumerUri).path("records").build())).thenReturn(mockedWebResource);
         final WebResource.Builder mockedBuilder = mock(WebResource.Builder.class);
         when(mockedWebResource.getRequestBuilder()).thenReturn(mockedBuilder);
         final ClientResponse mockedResponse = mock(ClientResponse.class);
@@ -174,7 +175,7 @@ public class MessageQueueProxyServiceImplWithEmptyQueueTest {
 
         messageQueueProxyService.consumeMessages(consumerUri);
         verify(mockedBuilder, never()).header(eq("Host"), eq("kafka"));
-        verify(mockedBuilder).header(eq("Accept"), eq("application/json"));
+        verify(mockedBuilder).header(eq("Accept"), eq(KAFKA_MESSAGE_CONTENT_TYPE));
         verify(mockedResponse, times(1)).close();
     }
 

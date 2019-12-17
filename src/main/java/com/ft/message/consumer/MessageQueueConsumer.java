@@ -35,6 +35,7 @@ public class MessageQueueConsumer {
         try {
             if (consumerInstance == null) {
                 consumerInstance = messageQueueProxyService.createConsumerInstance();
+                messageQueueProxyService.subscribeConsumerInstanceToTopic(consumerInstance);
             }
             List<MessageRecord> messageRecords = messageQueueProxyService.consumeMessages(consumerInstance);
             if (messageRecords == null || messageRecords.isEmpty()) {
@@ -59,6 +60,7 @@ public class MessageQueueConsumer {
       String msg = reason;
       try {
           if (consumerInstance != null) {
+              messageQueueProxyService.destroyConsumerInstanceSubscription(consumerInstance);
               messageQueueProxyService.destroyConsumerInstance(consumerInstance);
           }
       } catch (Throwable t1) {

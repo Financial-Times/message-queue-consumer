@@ -6,11 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.net.URI;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CreateConsumerInstanceResponse {
+public class ConsumerInstanceResponse {
 
     private URI baseUri;
 
-    public CreateConsumerInstanceResponse(@JsonProperty("base_uri") URI baseUri) {
+    public ConsumerInstanceResponse(@JsonProperty("base_uri") URI baseUri) {
         this.baseUri = baseUri;
     }
 

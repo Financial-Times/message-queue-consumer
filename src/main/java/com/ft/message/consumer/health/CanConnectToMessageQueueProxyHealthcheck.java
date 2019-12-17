@@ -2,9 +2,10 @@ package com.ft.message.consumer.health;
 
 import com.ft.message.consumer.config.HealthcheckConfiguration;
 import com.ft.message.consumer.config.MessageQueueConsumerConfiguration;
-import com.ft.message.consumer.proxy.model.CreateConsumerInstanceResponse;
+import com.ft.message.consumer.proxy.model.ConsumerInstanceResponse;
 import com.ft.platform.dropwizard.AdvancedHealthCheck;
 import com.ft.platform.dropwizard.AdvancedResult;
+import com.google.common.base.Strings;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -20,6 +21,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     private static final String groupName = "healthcheck";
     private static final int HTTP_RESPONSE_OK = 200;
     private static final int HTTP_RESPONSE_NO_CONTENT = 204;
+    private static final String KAFKA_MESSAGE_CONTENT_TYPE = "application/vnd.kafka.v2+json";
 
     private MessageQueueConsumerConfiguration configuration;
     private HealthcheckConfiguration healthcheckConfiguration;
@@ -45,7 +47,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
                 return reportUnhealthy(String.format("Unable to connect to queue proxy. %d", clientResponseToCreateConsumer.getStatus()));
             }
 
-            URI consumerInstance = clientResponseToCreateConsumer.getEntity(CreateConsumerInstanceResponse.class).getBaseUri();
+            URI consumerInstance = clientResponseToCreateConsumer.getEntity(ConsumerInstanceResponse.class).getBaseUri();
             URI messageReaderUri = buildMessageReaderUri(consumerInstance);
             clientResponseToCheckTopic = getClientResponseForMessageConsumer(messageReaderUri);
             if (clientResponseToCheckTopic.getStatus() != HTTP_RESPONSE_OK) {
@@ -75,13 +77,13 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     protected ClientResponse deleteConsumerInstance(URI consumerInstance) {
         UriBuilder uriBuilder = UriBuilder.fromUri(consumerInstance);
-        if (queueIsNotEmpty()) {
+        if (!Strings.isNullOrEmpty(configuration.getQueue())) {
             addProxyPortAndHostInUri(uriBuilder);
         }
         URI uri = uriBuilder.build();
 
         WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-        if (queueIsNotEmpty()) {
+        if (!Strings.isNullOrEmpty(configuration.getQueue())) {
             builder.header("Host", configuration.getQueue());
         }
         return builder.delete(ClientResponse.class);
@@ -89,8 +91,8 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     protected ClientResponse getClientResponseForMessageConsumer(URI readMessageFromUri) {
         WebResource.Builder builder = proxyClient.resource(readMessageFromUri).getRequestBuilder();
-        builder.header("Accept", "application/json");
-        if (queueIsNotEmpty()) {
+        builder.header("Accept", KAFKA_MESSAGE_CONTENT_TYPE);
+        if (!Strings.isNullOrEmpty(configuration.getQueue())) {
             builder.header("Host", configuration.getQueue());
         }
         return builder.get(ClientResponse.class);
@@ -98,8 +100,9 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     protected ClientResponse getClientResponseForProxyConnection(URI uri) {
         WebResource.Builder builder = proxyClient.resource(uri).getRequestBuilder();
-        builder.header("Content-Type", "application/json");
-        if (queueIsNotEmpty()) {
+        builder.header("Content-Type", KAFKA_MESSAGE_CONTENT_TYPE);
+
+        if (!Strings.isNullOrEmpty(configuration.getQueue())) {
             builder.header("Host", configuration.getQueue());
         }
         return builder.post(ClientResponse.class);
@@ -107,7 +110,7 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
 
     private URI buildMessageReaderUri(URI consumerUri) {
         UriBuilder uriBuilder = UriBuilder.fromUri(consumerUri).path("topics").path(configuration.getTopicName());
-        if (queueIsNotEmpty()) {
+        if (!Strings.isNullOrEmpty(configuration.getQueue())) {
             addProxyPortAndHostInUri(uriBuilder);
         }
         return uriBuilder.build();
@@ -124,10 +127,6 @@ public class CanConnectToMessageQueueProxyHealthcheck extends AdvancedHealthChec
     private void addProxyPortAndHostInUri(UriBuilder uriBuilder) {
         URI proxyUri = UriBuilder.fromUri(configuration.getQueueProxyHost()).build();
         uriBuilder.host(proxyUri.getHost()).port(proxyUri.getPort());
-    }
-
-    private boolean queueIsNotEmpty() {
-        return configuration.getQueue() != null && !configuration.getQueue().isEmpty();
     }
 
     private AdvancedResult reportUnhealthy(String message) {

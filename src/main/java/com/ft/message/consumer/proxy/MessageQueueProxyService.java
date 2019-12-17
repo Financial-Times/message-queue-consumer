@@ -12,6 +12,10 @@ public interface MessageQueueProxyService {
 
     void destroyConsumerInstance(URI consumerInstance);
 
+    void subscribeConsumerInstanceToTopic(URI consumerInstance);
+
+    void destroyConsumerInstanceSubscription(URI consumerInstance);
+
     List<MessageRecord> consumeMessages(URI consumerInstance);
 
     void commitOffsets(URI consumerInstance);
