@@ -15,12 +15,13 @@ backoffPeriod - period in milliseconds for which the app will sleep before tryin
 autoCommit - boolean flag which configures autoCommit when consuming messages. If true offsets are committed if the consume request to the proxy returns 200.
            - if false offsets are manually committed after the batch of messages are processed
            - because of the proxy limitations the recommendations are to use autocommit true for topics with small messages
-offsetReset - possible values are "none", "earliest" and "latest"
+offsetReset - possible values are "none", "earliest" and "latest" (any other value causes a Kafka proxy error)
             - earliest: start processing all messages from the beginning of a Kafka topic
             - latest: start processing messages which are produced after the consumer started
             - none: throw exception to the consumer if no previous offset is found for the consumer's group
             - because of the proxy limitations the recommendations are to use "latest" unless you have a very good reasons not to
             - using "earliest" will impact the memory usage of the proxy
+            - if not explicitly set the default value is "latest"
 streamCount - number of threads to use for processing messages
             - each thread will create a new proxy consumer instance which will be assigned to different kafka partition(s)
 ```
