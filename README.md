@@ -32,3 +32,4 @@ The library expects a jersey http client to be passed in. Make sure the client y
 1. Add library as a dependency
 1. Configure consumer with the params explained above
 1. Add implementation for: `com.ft.message.consumer.MessageListener`
+test
